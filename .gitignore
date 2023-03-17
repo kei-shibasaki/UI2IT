@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# custom
+datasets/*
+!datasets/dataset.py
+line_nortify_token.json
+experiments

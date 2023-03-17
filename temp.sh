@@ -1,0 +1,1 @@
+python -m train_codes.train -c config/config_lptn.json
