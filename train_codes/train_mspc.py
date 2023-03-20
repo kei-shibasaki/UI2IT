@@ -104,7 +104,7 @@ def train(opt_path):
             # G(T(A))
             GTA = netG(TA)
             # T(G(A))
-            grid_GB, TGA, constraint_GA, cordinate_contraint_GA = netP(GA)
+            TGA = grid_sample(GA, grid_A)
             gta_tga_distance = opt.coef_mspc*F.l1_loss(GTA, TGA)
 
             loss_pert_constraint_D = constraint_A + cordinate_contraint_A + constraint_B + cordinate_contraint_B
@@ -147,7 +147,7 @@ def train(opt_path):
             # netPが更新されるからTA, GTA, TGAを生成し直すほうが良いかも
             grid_A, TA, constraint_A, cordinate_contraint_A = netP(A)
             GTA = netG(TA)
-            grid_GB, TGA, constraint_GA, cordinate_contraint_GA = netP(GA)
+            TGA = grid_sample(GA, grid_A)
             gta_tga_distance = opt.coef_mspc*F.l1_loss(GTA, TGA)
 
             logits_GA_forG = netD(GA)
@@ -226,7 +226,7 @@ def train(opt_path):
                 fid_score = get_fid([out_dir_GA, out_dir_B], batch_size=32, dims=2048, num_workers=2) 
                     
                 txt = f'FID: {fid_score:f}'
-                print(txt)
+                # print(txt)
                 with open(log_path, mode='a', encoding='utf-8') as fp:
                     fp.write(txt+'\n')
                 lg = ''

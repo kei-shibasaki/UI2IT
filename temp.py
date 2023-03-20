@@ -120,7 +120,7 @@ def check_mspc2():
     from models.mspc import PerturbationNetwork, grid_sample
     from scripts.utils import read_img, arrange_images, tensor2ndarray
 
-    state_dict_P = torch.load('experiments/TEST_MSPC/ckpt/TEST_MSPC_best.ckpt', map_location=device)['netP_State_dict']
+    state_dict_P = torch.load('experiments/TEST_MSPC/ckpt/TEST_MSPC_002000.ckpt', map_location=device)['netP_state_dict']
 
     grid_size = 2
     crop_size = 256
@@ -128,11 +128,11 @@ def check_mspc2():
     pert_threshold = 2.0
     b,c,h,w = 1,3,256,256
 
-    A = read_img('lena.png').unsqueeze(0)
+    A = read_img('datasets/horse2zebra/trainA/n02381460_2.jpg').unsqueeze(0)
     A = F.interpolate(A, size=[256, 256], mode='bilinear', align_corners=False)
     A = A.to(device)
 
-    B = read_img('rakugakidasuka.jpg').unsqueeze(0)
+    B = read_img('datasets/horse2zebra/trainB/n02391049_2.jpg').unsqueeze(0)
     B = F.interpolate(B, size=[256, 256], mode='bilinear', align_corners=False)
     B = B.to(device)
 

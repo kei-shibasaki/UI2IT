@@ -39,7 +39,7 @@ def train(opt_path):
     os.makedirs(log_dir, exist_ok=True)
 
     log_items_train = [
-        'total_step','lr_G','lr_D', 'loss_D_B', 'loss_D_GA', 'loss_D_TB', 'loss_D_GTA', 'loss_D_perturbation', 'gp_D', 'gp_D_perturbation', 'loss_D', 
+        'total_step','lr_G','lr_D', 'loss_D_B', 'loss_D_GA', 'loss_D_TB', 'loss_D_GTA', 'loss_D_perturbation', 'loss_D', 
         'loss_G_GA', 'loss_G_GTA', 'gta_tga_distance', 'loss_G'
     ]
     log_items_val = [
@@ -54,7 +54,7 @@ def train(opt_path):
     
     shutil.copy(opt_path, f'./experiments/{opt.name}/{os.path.basename(opt_path)}')
     
-    loss_fn = GANLoss(gan_mode='wgangp').to(device)
+    loss_fn = GANLoss(gan_mode='lsgan').to(device)
     network_module_G = importlib.import_module(opt.network_module_G)
     netG = getattr(network_module_G, opt.model_type_G)(**opt.netG).to(device)
     network_module_D = importlib.import_module(opt.network_module_D)
@@ -103,6 +103,8 @@ def train(opt_path):
 
             # G(T(A))
             GTA = netG(TA)
+            # G(T(B))
+            GTB = netG(TB)
             # T(G(A))
             TGA = grid_sample(GA, grid_A)
             gta_tga_distance = opt.coef_mspc*F.l1_loss(GTA, TGA)
@@ -126,10 +128,10 @@ def train(opt_path):
 
             loss_D_perturbation = gta_tga_distance - opt.coef_constraint*loss_pert_constraint_D
 
-            gp_D = opt.coef_gp*cal_gradient_penalty(netD, B, GA.detach(), device)[0]
-            gp_D_perturbation = opt.coef_gp*cal_gradient_penalty(netD_perturbation, TB, GTA.detach(), device)[0]
+            # gp_D = opt.coef_gp*cal_gradient_penalty(netD, B, GA.detach(), device)[0]
+            # gp_D_perturbation = opt.coef_gp*cal_gradient_penalty(netD_perturbation, TB, GTA.detach(), device)[0]
             
-            loss_D = loss_D_B + loss_D_GA + loss_D_TB + loss_D_GTA + loss_D_perturbation + gp_D + gp_D_perturbation
+            loss_D = loss_D_B + loss_D_GA + loss_D_TB + loss_D_GTA + loss_D_perturbation
 
             loss_D.backward(retain_graph=True)
             if opt.use_grad_clip: torch.nn.utils.clip_grad_norm_(netD.parameters(), opt.grad_clip_val)
@@ -147,14 +149,13 @@ def train(opt_path):
             # netPが更新されるからTA, GTA, TGAを生成し直すほうが良いかも
             grid_A, TA, constraint_A, cordinate_contraint_A = netP(A)
             GTA = netG(TA)
-            TGA = grid_sample(GA, grid_A)
+            grid_GB, TGA, constraint_GA, cordinate_contraint_GA = netP(GA)
             gta_tga_distance = opt.coef_mspc*F.l1_loss(GTA, TGA)
 
             logits_GA_forG = netD(GA)
             loss_G_GA = loss_fn(logits_GA_forG, target_is_real=True)
             logits_GTA_forG = netD_perturbation(GTA)
             loss_G_GTA = loss_fn(logits_GTA_forG, target_is_real=True)
-            # loss_G_l1 = opt.coef_l1*(F.l1_loss(A, GA) + F.l1_loss(TA, GTA))
             
             loss_G = loss_G_GA + loss_G_GTA + gta_tga_distance
             loss_G.backward()
