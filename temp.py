@@ -5,15 +5,17 @@ import numpy as np
 import itertools
 from easydict import EasyDict
 from tqdm import tqdm
+import cv2 
+from PIL import Image
 
 device = torch.device('cuda')
 
-def check_mpsc():
-    from models.mpsc import UnBoundedGridLocNet, TPSGridGen, grid_sample, scale_constraint
+def check_mspc():
+    from models.mspc import UnBoundedGridLocNet, TPSGridGen, grid_sample, scale_constraint
     grid_size = 2
     crop_size = 128
     r1 = r2 = 0.9
-    b,c,h,w = 1,3,64,64
+    b,c,h,w = 1,3,256,256
 
     target_control_points = torch.Tensor(list(itertools.product(
         np.arange(-r1, r1 + 0.00001, 2.0 * r1 / (grid_size - 1)),
@@ -92,7 +94,62 @@ def check_schedular():
     plt.plot(lrs)
     plt.savefig('temp.png')
 
+def check_netP():
+    from models.mspc import PerturbationNetwork
+    from scripts.utils import load_option
+
+    opt = EasyDict(load_option('config/config_lptn_mspc.json'))
+    netP = PerturbationNetwork(**opt.netP).to(device)
+
+    A = torch.rand((1,3,256,256)).to(device)
+    B = torch.rand((1,3,256,256)).to(device)
+
+    #grid_A, pert_A, constraint_A, cordinate_contraint_A, grid_B, pert_B, constraint_B, cordinate_contraint_B = netP(A, B)
+    out = netP(A)
+
+    for value in out:
+        if isinstance(value, torch.Tensor):
+            if value.shape!=torch.Size([]):
+                print(f'{value.shape}')
+            else:
+                print(f'{value}')
+        else:
+            print(f'{value}')
+    
+def check_mspc2():
+    from models.mspc import PerturbationNetwork, grid_sample
+    from scripts.utils import read_img, arrange_images, tensor2ndarray
+
+    state_dict_P = torch.load('experiments/TEST_MSPC/ckpt/TEST_MSPC_best.ckpt', map_location=device)['netP_State_dict']
+
+    grid_size = 2
+    crop_size = 256
+    r1 = r2 = 0.9
+    pert_threshold = 2.0
+    b,c,h,w = 1,3,256,256
+
+    A = read_img('lena.png').unsqueeze(0)
+    A = F.interpolate(A, size=[256, 256], mode='bilinear', align_corners=False)
+    A = A.to(device)
+
+    B = read_img('rakugakidasuka.jpg').unsqueeze(0)
+    B = F.interpolate(B, size=[256, 256], mode='bilinear', align_corners=False)
+    B = B.to(device)
+
+    netP = PerturbationNetwork(grid_size, crop_size, r1, r2, pert_threshold, device).to(device)
+    netP.load_state_dict(state_dict_P, strict=True)
+
+    grid_A, pert_A, constraint_A, cordinate_contraint_A = netP(A)
+    grid_B, pert_B, constraint_B, cordinate_contraint_B = netP(B)
+
+    A, pert_A, B, pert_B = map(lambda x: tensor2ndarray(x)[0,:,:,:].astype(np.uint8), [A, pert_A, B, pert_B])
+
+    A, pert_A, B, pert_B = map(lambda x: Image.fromarray(x), [A, pert_A, B, pert_B])
+
+    compare = arrange_images([A, pert_A, B, pert_B])
+    compare.save('temp.png')
+
 
 
 if __name__=='__main__':
-    check_schedular()
+    check_mspc2()

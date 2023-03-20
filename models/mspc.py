@@ -181,3 +181,34 @@ class UnBoundedGridLocNet(nn.Module):
         points = points.view(batch_size, -1, 2)
         points = self.reverse(points)
         return points
+
+class PerturbationNetwork(nn.Module):
+    def __init__(self, grid_size, crop_size, r1, r2, pert_threshold, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
+        super().__init__()
+        self.grid_size = grid_size
+        self.crop_size = crop_size
+        self.pert_threshold = pert_threshold
+
+        self.target_control_points = torch.Tensor(list(itertools.product(
+            np.arange(-r1, r1 + 0.00001, 2.0 * r1 / (grid_size - 1)),
+            np.arange(-r2, r2 + 0.00001, 2.0 * r2 / (grid_size - 1)),
+        )))
+        Y, X = self.target_control_points.split(1, dim=1)
+        self.target_control_point = torch.cat([X, Y], dim=1).to(device)
+
+        self.loc = UnBoundedGridLocNet(grid_size, grid_size, self.target_control_point)
+        self.tps = TPSGridGen()
+    
+    def forward(self, x):
+        b, _, _, _ = x.shape
+        self.target_control_points = torch.cat([self.target_control_point.unsqueeze(0)]*b, dim=0)
+
+        downsampled = F.interpolate(x, [64, 64], mode='bilinear', align_corners=True)
+        source_control_points = self.loc(downsampled)
+        source_coordinate = self.tps(source_control_points, self.target_control_points, self.crop_size, self.crop_size)
+        grid = source_coordinate.view(b, self.crop_size, self.crop_size, 2)
+        pert = grid_sample(x, grid)
+        constraint = scale_constraint(source_control_points, self.target_control_points, self.pert_threshold)
+        cordinate_contraint = ((source_coordinate.mean(dim=1).abs()).clamp(min=0.25)).mean()
+
+        return grid, pert, constraint, cordinate_contraint
