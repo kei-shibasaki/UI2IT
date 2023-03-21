@@ -38,7 +38,7 @@ def train(opt_path):
     os.makedirs(log_dir, exist_ok=True)
 
     log_items_train = [
-        'total_step', 'lr', 'loss_G_GA', 'loss_G_GB', 'loss_G_cycle_A', 'loss_G_cycle_B', 
+        'total_step', 'lr', 'loss_G_GA', 'loss_G_GB', 'loss_G_cycle_A', 'loss_G_cycle_B', 'loss_idt_A', 'loss_idt_B', 'loss_G',
         'loss_D_B', 'loss_D_GA', 'loss_D_AB', 'loss_D_BA_A', 'loss_D_BA_GB', 'loss_D_BA'
     ]
     log_items_val = [
@@ -88,6 +88,8 @@ def train(opt_path):
             GB = netG_BA(B)
             A_rec = netG_BA(GA)
             B_rec = netG(GB)
+            idt_B = netG(B)
+            idt_A = netG_BA(A)
 
             # Training G
             set_requires_grad([netD, netD_BA], False)
@@ -98,8 +100,10 @@ def train(opt_path):
             loss_G_GB = opt.coef_adv*loss_fn(logits_GB, target_is_real=True)
             loss_G_cycle_A = opt.coef_cycle*F.l1_loss(A, A_rec)
             loss_G_cycle_B = opt.coef_cycle*F.l1_loss(B, B_rec)
+            loss_idt_A = opt.coef_idt*F.l1_loss(A, idt_A)
+            loss_idt_B = opt.coef_idt*F.l1_loss(B, idt_B)
 
-            loss_G = loss_G_GA + loss_G_GB + loss_G_cycle_A + loss_G_cycle_B
+            loss_G = loss_G_GA + loss_G_GB + loss_G_cycle_A + loss_G_cycle_B + loss_idt_A + loss_idt_B
             loss_G.backward()
             if opt.use_grad_clip: torch.nn.utils.clip_grad_norm_(netG.parameters(), opt.grad_clip_val)
             if opt.use_grad_clip: torch.nn.utils.clip_grad_norm_(netG_BA.parameters(), opt.grad_clip_val)
@@ -116,9 +120,9 @@ def train(opt_path):
             loss_D_AB = loss_D_B + loss_D_GA
             loss_D_AB.backward()
 
-            logits_D_BA_A = netD(A)
+            logits_D_BA_A = netD_BA(A)
             loss_D_BA_A = opt.coef_adv*loss_fn(logits_D_BA_A, target_is_real=True)
-            logits_D_BA_GB = netD(GB.detach())
+            logits_D_BA_GB = netD_BA(GB.detach())
             loss_D_BA_GB = opt.coef_adv*loss_fn(logits_D_BA_GB, target_is_real=False)
             loss_D_BA = loss_D_BA_A + loss_D_BA_GB
             loss_D_BA.backward()
