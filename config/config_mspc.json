@@ -35,7 +35,7 @@
         "pert_threshold": 2.0
     },
 
-    "batch_size": 4,
+    "batch_size": 32,
     "steps": 300000,
     "use_grad_clip": false,
     "grad_clip_val": 0.1,

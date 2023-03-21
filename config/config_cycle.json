@@ -10,19 +10,21 @@
 
     "name": "TEST_cycle",
     "input_resolution": [256, 256],
-    "network_module_G": "models.lptn",
-    "model_type_G": "LPTN",
+    "network_module_G": "models.resnet",
+    "model_type_G": "ResnetGenerator",
     "netG": {
-        "nrb_low": 5,
-        "nrb_high": 3,
-        "num_high": 3
+        "input_nc": 3, 
+        "output_nc": 3, 
+        "ngf": 64, 
+        "n_blocks": 9
     },
-    "network_module_G_BA": "models.lptn",
-    "model_type_G_BA": "LPTN",
+    "network_module_G_BA": "models.resnet",
+    "model_type_G_BA": "ResnetGenerator",
     "netG_BA": {
-        "nrb_low": 5,
-        "nrb_high": 3,
-        "num_high": 3
+        "input_nc": 3, 
+        "output_nc": 3, 
+        "ngf": 64, 
+        "n_blocks": 9
     },
     "network_module_D": "models.discriminator",
     "model_type_D": "NLayerDiscriminator",
@@ -39,7 +41,7 @@
         "n_layers": 3
     },
 
-    "batch_size": 16,
+    "batch_size": 1,
     "steps": 300000,
     "use_grad_clip": false,
     "grad_clip_val": 0.1,
