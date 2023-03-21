@@ -26,13 +26,13 @@
         "n_layers": 3
     },
 
-    "batch_size": 4,
+    "batch_size": 32,
     "steps": 300000,
     "use_grad_clip": false,
     "grad_clip_val": 0.1,
     "coef_adv": 1,
-    "coef_gp": 100,
-    "coef_recons": 1000,
+    "coef_gp": 10,
+    "coef_recons": 10,
     
     "lr_w": 5e-5, 
     "lr_max": 1e-4, 
@@ -45,7 +45,7 @@
     "save_compare": true,
 
     "print_freq": 100,
-    "eval_freq": 200,
+    "eval_freq": 2000,
     "save_freq": 50000,
     "pretrained_path": null,
     "resume_step": 0,

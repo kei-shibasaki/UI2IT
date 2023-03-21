@@ -19,6 +19,7 @@ from scripts.utils import load_option, pad_tensor, send_line_notify, tensor2ndar
 from scripts.cal_fid import get_fid
 from scripts.optimizer import CosineLRWarmup
 
+
 def train(opt_path):
     opt = EasyDict(load_option(opt_path))
     torch.backends.cudnn.benchmark = True
@@ -35,11 +36,18 @@ def train(opt_path):
     os.makedirs(image_out_dir, exist_ok=True)
     os.makedirs(log_dir, exist_ok=True)
 
+    log_items_train = [
+        'total_step','lr_G','lr_D', 'loss_D_real', 'loss_D_fake', 'gp', 'loss_D', 'loss_G_fake', 'recons_loss', 'loss_G'
+    ]
+    log_items_val = [
+        'total_step', 'fid_score'
+    ]
+
     with open(log_path, mode='w', encoding='utf-8') as fp: fp.write('')
     with open(log_train_losses_path, mode='w', encoding='utf-8') as fp: 
-        fp.write('total_step,lr_G,lr_D,adv_loss,recons_loss,loss_G,loss_D_fake,loss_D_real,gp,loss_D\n')
+        fp.write(','.join(log_items_train)+'\n')
     with open(log_test_losses_paths, mode='w', encoding='utf-8') as fp:
-        fp.write('step,fid\n')
+        fp.write(','.join(log_items_val)+'\n')
     
     shutil.copy(opt_path, f'./experiments/{opt.name}/{os.path.basename(opt_path)}')
     
@@ -53,9 +61,6 @@ def train(opt_path):
     schedulerG = CosineLRWarmup(optimG, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
     optimD = torch.optim.Adam(netD.parameters(), lr=opt.learning_rate_D, betas=opt.betas)
     schedulerD = CosineLRWarmup(optimD, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
-
-    if opt.resume_step is not None:
-        for _ in range(opt.resume_step): schedulerG.step()
 
     if opt.pretrained_path:
         state_dict = torch.load(opt.pretrained_path, map_location=device)
@@ -91,17 +96,17 @@ def train(opt_path):
 
             loss_D = loss_D_real + loss_D_fake + gp
             loss_D.backward(retain_graph=True)
-            if opt.use_grad_clip: torch.nn.utils.clip_grad_norm_(netG.parameters(), opt.grad_clip_val)
+            if opt.use_grad_clip: torch.nn.utils.clip_grad_norm_(netD.parameters(), opt.grad_clip_val)
             optimD.step()
             schedulerD.step()
 
             # Training G
             netG.zero_grad()
             logits_fake = netD(fake)
-            adv_loss = loss_fn(logits_fake, target_is_real=False)
+            loss_G_fake = loss_fn(logits_fake, target_is_real=True)
             recons_loss = F.mse_loss(A, fake)
             
-            loss_G = adv_loss + recons_loss
+            loss_G = loss_G_fake + recons_loss
             loss_G.backward()
             if opt.use_grad_clip: torch.nn.utils.clip_grad_norm_(netG.parameters(), opt.grad_clip_val)
             optimG.step()
@@ -110,10 +115,17 @@ def train(opt_path):
             total_step += 1
 
             if total_step%1==0:
-                lr_G = [group['lr'] for group in optimG.param_groups]
-                lr_D = [group['lr'] for group in optimD.param_groups]
+                lr_G = [group['lr'] for group in optimG.param_groups][0]
+                lr_D = [group['lr'] for group in optimD.param_groups][0]
+                lg = ''
+                for logname_idx, name in enumerate(log_items_train):
+                    val = eval(name)
+                    if logname_idx!=len(log_items_train):
+                        lg = lg + f'{val:f},'
+                    else:
+                        lg = lg + f'{val:f}'
                 with open(log_train_losses_path, mode='a', encoding='utf-8') as fp:
-                    fp.write(f'{total_step},{lr_G[0]:f},{lr_D[0]:f},{adv_loss:f},{recons_loss:f},{loss_G:f},{loss_D_fake:f},{loss_D_real:f},{gp:f},{loss_D:f}\n')
+                    fp.write(lg+'\n')
             
             if total_step%opt.print_freq==0 or total_step==1:
                 rest_step = opt.steps-total_step
@@ -121,8 +133,12 @@ def train(opt_path):
                 elapsed = datetime.timedelta(seconds=int(time.time()-start_time))
                 eta = datetime.timedelta(seconds=int(rest_step*time_per_step))
                 lg = f'{total_step}/{opt.steps}, Epoch:{str(e).zfill(len(str(opt.steps)))}, elepsed: {elapsed}, eta: {eta}, '
-                lg = lg + f'loss_G: {loss_G:f}, loss_D: {loss_D:f}, adv_loss: {adv_loss:f}, recons_loss: {recons_loss:f}, '
-                lg = lg + f'loss_D_real: {loss_D_real:f}, loss_D_fake: {loss_D_fake:f}, gp: {gp:f}'
+                for logname_idx, name in enumerate(log_items_train):
+                    val = eval(name)
+                    if logname_idx!=len(log_items_train):
+                        lg = lg + f'{name}: {val:f}, '
+                    else:
+                        lg = lg + f'{name}: {val:f}'
                 print(lg)
                 with open(log_path, mode='a', encoding='utf-8') as fp:
                     fp.write(lg+'\n')
@@ -156,15 +172,23 @@ def train(opt_path):
                         out_dir_compare = os.path.join(image_out_dir, f'{str(total_step).zfill(len(str(opt.steps)))}', 'compare')
                         os.makedirs(out_dir_compare, exist_ok=True)
                         arrange_images([A, fake, B]).save(os.path.join(out_dir_compare, f'{i:04}.{opt.save_extention}'))
+                netG.train()
                 
                 fid_score = get_fid([out_dir_fake, out_dir_B], batch_size=32, dims=2048, num_workers=2) 
                     
                 txt = f'FID: {fid_score:f}'
-                print(txt)
+                # print(txt)
                 with open(log_path, mode='a', encoding='utf-8') as fp:
                     fp.write(txt+'\n')
+                lg = ''
+                for logname_idx, name in enumerate(log_items_val):
+                    val = eval(name)
+                    if logname_idx!=len(log_items_val):
+                        lg = lg + f'{val:f},'
+                    else:
+                        lg = lg + f'{val:f}'
                 with open(log_test_losses_paths, mode='a', encoding='utf-8') as fp:
-                    fp.write(f'{total_step},{fid_score:f}\n')
+                    fp.write(lg+'\n')
                 
                 if fid_score <= best_fid:
                     best_fid = fid_score
