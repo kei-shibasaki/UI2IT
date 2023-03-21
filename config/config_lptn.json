@@ -26,13 +26,13 @@
         "n_layers": 3
     },
 
-    "batch_size": 32,
+    "batch_size": 4,
     "steps": 300000,
     "use_grad_clip": false,
     "grad_clip_val": 0.1,
     "coef_adv": 1,
     "coef_gp": 10,
-    "coef_recons": 10,
+    "coef_l1": 1,
     
     "lr_w": 5e-5, 
     "lr_max": 1e-4, 
