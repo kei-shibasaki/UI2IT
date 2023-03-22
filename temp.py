@@ -7,6 +7,7 @@ from easydict import EasyDict
 from tqdm import tqdm
 import cv2 
 from PIL import Image
+import pandas as pd 
 
 device = torch.device('cuda')
 
@@ -149,7 +150,23 @@ def check_mspc2():
     compare = arrange_images([A, pert_A, B, pert_B])
     compare.save('temp.png')
 
+def check_csv():
+    df = pd.read_csv('temp2.csv', index_col=None)
+
+    print(df.head())
+
+def rewrite_csv():
+    with open('temp.csv', 'r', encoding='utf-8') as fp:
+        lines = fp.readlines()
+
+    with open('temp2.csv', 'w', encoding='utf-8') as fp:
+        for i, line in enumerate(tqdm(lines)):
+            if i!=0:
+                fp.write(f'{line[:-2]}\n')
+            else:
+                fp.write(line)
+
 
 
 if __name__=='__main__':
-    check_mspc2()
+    check_csv()

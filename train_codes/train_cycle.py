@@ -139,7 +139,7 @@ def train(opt_path):
                 lg = ''
                 for logname_idx, name in enumerate(log_items_train):
                     val = eval(name)
-                    if logname_idx!=len(log_items_train):
+                    if logname_idx!=len(log_items_train)-1:
                         lg = lg + f'{val:f},'
                     else:
                         lg = lg + f'{val:f}'
@@ -154,7 +154,7 @@ def train(opt_path):
                 lg = f'{total_step}/{opt.steps}, Epoch:{str(e).zfill(len(str(opt.steps)))}, elepsed: {elapsed}, eta: {eta}, '
                 for logname_idx, name in enumerate(log_items_train):
                     val = eval(name)
-                    if logname_idx!=len(log_items_train):
+                    if logname_idx!=len(log_items_train)-1:
                         lg = lg + f'{name}: {val:f}, '
                     else:
                         lg = lg + f'{name}: {val:f}'
@@ -208,7 +208,7 @@ def train(opt_path):
                 lg = ''
                 for logname_idx, name in enumerate(log_items_val):
                     val = eval(name)
-                    if logname_idx!=len(log_items_val):
+                    if logname_idx!=len(log_items_val)-1:
                         lg = lg + f'{val:f},'
                     else:
                         lg = lg + f'{val:f}'

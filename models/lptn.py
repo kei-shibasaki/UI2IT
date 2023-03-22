@@ -83,12 +83,12 @@ class Trans_high(nn.Module):
         return pyr_result
 
 class LPTN(nn.Module):
-    def __init__(self, opt_netG):
+    def __init__(self, nrb_low, nrb_high, num_high):
         super(LPTN, self).__init__()
 
-        self.lap_pyramid = LaplacianPyramid(opt_netG.num_high)
-        trans_low = Trans_low(opt_netG.nrb_low)
-        trans_high = Trans_high(opt_netG.nrb_high, num_high=opt_netG.num_high)
+        self.lap_pyramid = LaplacianPyramid(num_high)
+        trans_low = Trans_low(nrb_low)
+        trans_high = Trans_high(nrb_high, num_high=num_high)
         self.trans_low = trans_low.cuda()
         self.trans_high = trans_high.cuda()
 
