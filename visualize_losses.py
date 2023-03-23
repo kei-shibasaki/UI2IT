@@ -22,14 +22,14 @@ def plt_losses(csv_path, columns_to_plot, out_path):
     plt.savefig(out_path)
 
 if __name__=='__main__':
-    csv_path = 'temp2.csv'
+    csv_path = 'experiments/TEST_MSPC/logs/train_losses_TEST_MSPC.csv'
     #columns_to_plot = ['loss_G_GA','loss_G_GB','loss_G_cycle_A','loss_G_cycle_B','loss_idt_A','loss_idt_B','loss_G','loss_D_B','loss_D_GA','loss_D_AB','loss_D_BA_A','loss_D_BA_GB','loss_D_BA']
-    columns_to_plot = ['loss_G','loss_D_AB','loss_D_BA']
-    out_path='temp.png'
+    columns_to_plot = ['loss_G','loss_D']
+    out_path='temp1.png'
     plt_losses(csv_path, columns_to_plot, out_path)
-    csv_path = 'temp2.csv'
+    csv_path = 'experiments/TEST_MSPC/logs/test_losses_TEST_MSPC.csv'
     #columns_to_plot = ['loss_G_GA','loss_G_GB','loss_G_cycle_A','loss_G_cycle_B','loss_idt_A','loss_idt_B','loss_G','loss_D_B','loss_D_GA','loss_D_AB','loss_D_BA_A','loss_D_BA_GB','loss_D_BA']
-    columns_to_plot = ['loss_G','loss_D_AB','loss_D_BA']
-    out_path='temp.png'
+    columns_to_plot = ['fid_score']
+    out_path='temp2.png'
     plt_losses(csv_path, columns_to_plot, out_path)
 

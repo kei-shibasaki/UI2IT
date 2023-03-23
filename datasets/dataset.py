@@ -49,3 +49,32 @@ class UnpairedImageDataset(torch.utils.data.Dataset):
     def __len__(self):
         return min(len(self.paths_A), len(self.paths_B))
 
+class SimgleImageDataset(torch.utils.data.Dataset):
+    def __init__(self, source_path, input_resolution, ext='jpg', cache_images=True):
+        super().__init__()
+        self.h, self.w = input_resolution
+        self.cache_images = cache_images
+        self.inter_mode = TF.InterpolationMode.BILINEAR
+        self.paths = sorted(glob.glob(os.path.join(source_path, f'*.{ext}')))
+
+        # Save 8uint training images into memory.
+        if self.cache_images:
+            self.images = [self.to_cache(img_path) for img_path in self.paths]
+        else:
+            self.images = None
+    
+    def to_cache(self, img_path):
+        img = load_img_uint8(img_path, to_tensor=True).permute(2,0,1)
+        img = TF.resize(img, [self.h, self.w], self.inter_mode)
+        return img
+    
+    def __getitem__(self, idx):
+        if self.cache_images:
+            img = self.images[idx].to(torch.float32) / 255.0
+        else:
+            img = TF.resize(read_img(self.paths[idx]), [self.h, self.w], self.inter_mode)
+        
+        return img
+    
+    def __len__(self):
+        return len(self.paths)
