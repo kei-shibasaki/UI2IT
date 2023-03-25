@@ -8,7 +8,7 @@
     "cache_images": true,
     "enable_line_nortify": true,
 
-    "name": "TEST_MSPC",
+    "name": "MSPC_paper",
     "input_resolution": [256, 256],
     "network_module_G": "models.resnet",
     "model_type_G": "ResnetGenerator",
@@ -49,8 +49,7 @@
     "lr_min": 1e-7, 
     "step_w": 50000, 
     "step_max": 300000,
-    "learning_rate_G": 1e-4,
-    "learning_rate_D": 1e-4,
+    "learning_rate": 1e-4,
     "betas": [0.5, 0.999], 
     "save_compare": true,
 

@@ -10,7 +10,7 @@ def smoothing(array, a):
         new_array[i] = (1-a)*array[i] + a*new_array[i-1]
     return new_array
 
-def plt_losses(csv_path, columns_to_plot, out_path):
+def plt_losses_train(csv_path, columns_to_plot, out_path):
     df = pd.read_csv(csv_path)
 
     plt.figure(figsize=(8, 4.5))
@@ -19,17 +19,41 @@ def plt_losses(csv_path, columns_to_plot, out_path):
         plt.plot(X, smoothing(df[col_name], 0.9), label=f'{col_name}', alpha=0.5)
     plt.grid()
     plt.legend()
+    plt.xlabel('Step')
+    plt.ylabel('Value')
     plt.savefig(out_path)
 
+def plt_losses_val(csv_path, columns_to_plot, out_path):
+    df = pd.read_csv(csv_path)
+
+    plt.figure(figsize=(8, 4.5))
+    X = df['total_step']
+    for col_name in columns_to_plot:
+        plt.plot(X, df[col_name], label=f'{col_name}', alpha=0.5)
+        min_idx = df[col_name].idxmin()
+        min_step = df['total_step'][min_idx]
+        min_val = df[col_name][min_idx]
+        plt.scatter(min_step, min_val, s=10, color='r')
+
+    plt.grid()
+    plt.legend()
+    plt.xlabel('Step')
+    plt.ylabel('Value')
+    plt.title(f'Min FID: {min_val:.3f}')
+    plt.savefig(out_path)
+
+
 if __name__=='__main__':
-    csv_path = 'experiments/TEST_MSPC/logs/train_losses_TEST_MSPC.csv'
+    log_name = 'MSPC_paper'
+    log_path = f'experiments/{log_name}/logs'
+    train_csv_path = os.path.join(log_path, f'train_losses_{log_name}.csv')
+    val_csv_path = os.path.join(log_path, f'test_losses_{log_name}.csv')
     #columns_to_plot = ['loss_G_GA','loss_G_GB','loss_G_cycle_A','loss_G_cycle_B','loss_idt_A','loss_idt_B','loss_G','loss_D_B','loss_D_GA','loss_D_AB','loss_D_BA_A','loss_D_BA_GB','loss_D_BA']
     columns_to_plot = ['loss_G','loss_D']
-    out_path='temp1.png'
-    plt_losses(csv_path, columns_to_plot, out_path)
-    csv_path = 'experiments/TEST_MSPC/logs/test_losses_TEST_MSPC.csv'
+    out_path = os.path.join(log_path, f'train_losses_{log_name}.png')
+    plt_losses_train(train_csv_path, columns_to_plot, out_path)
     #columns_to_plot = ['loss_G_GA','loss_G_GB','loss_G_cycle_A','loss_G_cycle_B','loss_idt_A','loss_idt_B','loss_G','loss_D_B','loss_D_GA','loss_D_AB','loss_D_BA_A','loss_D_BA_GB','loss_D_BA']
     columns_to_plot = ['fid_score']
-    out_path='temp2.png'
-    plt_losses(csv_path, columns_to_plot, out_path)
+    out_path = os.path.join(log_path, f'val_losses_{log_name}.png')
+    plt_losses_val(val_csv_path, columns_to_plot, out_path)
 

@@ -8,7 +8,7 @@
     "cache_images": true,
     "enable_line_nortify": true,
 
-    "name": "TEST_cycle_noidt",
+    "name": "cycle_paper",
     "input_resolution": [256, 256],
     "network_module_G": "models.resnet",
     "model_type_G": "ResnetGenerator",
@@ -43,11 +43,10 @@
 
     "batch_size": 1,
     "steps": 300000,
-    "use_grad_clip": true,
+    "use_grad_clip": false,
     "grad_clip_val": 0.1,
     "coef_adv": 1,
     "coef_cycle": 10,
-    "coef_idt": 0.0,
     
     "lr_w": 5e-5, 
     "lr_max": 1e-4, 
