@@ -19,7 +19,7 @@ from datasets.dataset import UnpairedImageDataset, SimgleImageDataset
 from scripts.losses import GANLoss, cal_gradient_penalty
 from scripts.utils import load_option, pad_tensor, send_line_notify, tensor2ndarray, arrange_images, set_requires_grad
 from scripts.cal_fid import get_fid
-from scripts.optimizer import CosineLRWarmup
+from scripts.optimizer import CosineLRWarmup, LinearLRWarmup
 
 
 def train(opt_path):
@@ -54,7 +54,7 @@ def train(opt_path):
     
     shutil.copy(opt_path, f'./experiments/{opt.name}/{os.path.basename(opt_path)}')
     
-    loss_fn = GANLoss(gan_mode='vanilla').to(device)
+    loss_fn = GANLoss(gan_mode='lsgan').to(device)
     network_module_G = importlib.import_module(opt.network_module_G)
     netG = getattr(network_module_G, opt.model_type_G)(**opt.netG).to(device)
     network_module_D = importlib.import_module(opt.network_module_D)
@@ -63,11 +63,11 @@ def train(opt_path):
     netD_perturbation = getattr(network_module_D, opt.model_type_D)(opt.netD).to(device)
 
     optimG = torch.optim.Adam(netG.parameters(), lr=opt.learning_rate, betas=opt.betas)
-    schedulerG = CosineLRWarmup(optimG, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
+    schedulerG = LinearLRWarmup(optimG, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
     optimD = torch.optim.Adam(itertools.chain(netD.parameters(), netD_perturbation.parameters()), lr=opt.learning_rate, betas=opt.betas)
-    schedulerD = CosineLRWarmup(optimD, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
+    schedulerD = LinearLRWarmup(optimD, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
     optimP = torch.optim.Adam(netP.parameters(), lr=opt.learning_rate, betas=opt.betas)
-    schedulerP = CosineLRWarmup(optimP, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
+    schedulerP = LinearLRWarmup(optimP, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
 
     train_dataset = UnpairedImageDataset(opt.trainA_path, opt.trainB_path, opt.input_resolution, opt.data_extention, opt.cache_images)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=2)
@@ -90,8 +90,6 @@ def train(opt_path):
             B = data['B'].to(device)
             # G(A)
             GA = netG(A)
-            # G(B)
-            GB = netG(B)
             # T(A)
             grid_A, TA, constraint_A, cordinate_contraint_A = netP(A)
             # T(B)

@@ -99,7 +99,7 @@ def check_netP():
     from models.mspc import PerturbationNetwork
     from scripts.utils import load_option
 
-    opt = EasyDict(load_option('config/config_lptn_mspc.json'))
+    opt = EasyDict(load_option('config/config_mspc.json'))
     netP = PerturbationNetwork(**opt.netP).to(device)
 
     A = torch.rand((1,3,256,256)).to(device)
@@ -167,6 +167,5 @@ def rewrite_csv():
                 fp.write(line)
 
 
-
 if __name__=='__main__':
-    check_csv()
+    check_netP()

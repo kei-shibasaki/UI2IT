@@ -48,11 +48,9 @@ if __name__=='__main__':
     log_path = f'experiments/{log_name}/logs'
     train_csv_path = os.path.join(log_path, f'train_losses_{log_name}.csv')
     val_csv_path = os.path.join(log_path, f'test_losses_{log_name}.csv')
-    #columns_to_plot = ['loss_G_GA','loss_G_GB','loss_G_cycle_A','loss_G_cycle_B','loss_idt_A','loss_idt_B','loss_G','loss_D_B','loss_D_GA','loss_D_AB','loss_D_BA_A','loss_D_BA_GB','loss_D_BA']
     columns_to_plot = ['loss_G','loss_D']
     out_path = os.path.join(log_path, f'train_losses_{log_name}.png')
     plt_losses_train(train_csv_path, columns_to_plot, out_path)
-    #columns_to_plot = ['loss_G_GA','loss_G_GB','loss_G_cycle_A','loss_G_cycle_B','loss_idt_A','loss_idt_B','loss_G','loss_D_B','loss_D_GA','loss_D_AB','loss_D_BA_A','loss_D_BA_GB','loss_D_BA']
     columns_to_plot = ['fid_score']
     out_path = os.path.join(log_path, f'val_losses_{log_name}.png')
     plt_losses_val(val_csv_path, columns_to_plot, out_path)

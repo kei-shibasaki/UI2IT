@@ -16,7 +16,7 @@ from PIL import Image
 
 from datasets.dataset import UnpairedImageDataset, SimgleImageDataset
 from scripts.losses import GANLoss, cal_gradient_penalty
-from scripts.utils import load_option, pad_tensor, send_line_notify, tensor2ndarray, arrange_images, set_requires_grad
+from scripts.utils import load_option, pad_tensor, send_line_notify, tensor2ndarray, arrange_images, set_requires_grad, ImagePool
 from scripts.cal_fid import get_fid
 from scripts.optimizer import CosineLRWarmup
 
@@ -53,7 +53,7 @@ def train(opt_path):
     
     shutil.copy(opt_path, f'./experiments/{opt.name}/{os.path.basename(opt_path)}')
     
-    loss_fn = GANLoss(gan_mode='vanilla').to(device)
+    loss_fn = GANLoss(gan_mode='lsgan').to(device)
     network_module_G = importlib.import_module(opt.network_module_G)
     netG = getattr(network_module_G, opt.model_type_G)(**opt.netG).to(device)
     network_module_G_BA = importlib.import_module(opt.network_module_G_BA)
@@ -63,11 +63,13 @@ def train(opt_path):
     network_module_D_BA = importlib.import_module(opt.network_module_D_BA)
     netD_BA = getattr(network_module_D_BA, opt.model_type_D_BA)(opt.netD_BA).to(device)
 
+    GA_pool = ImagePool(opt.pool_size)
+    GB_pool = ImagePool(opt.pool_size)
+
     optimG = torch.optim.Adam(itertools.chain(netG.parameters(), netG_BA.parameters()), lr=opt.learning_rate, betas=opt.betas)
     schedulerG = CosineLRWarmup(optimG, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
     optimD = torch.optim.Adam(itertools.chain(netD.parameters(), netD_BA.parameters()), lr=opt.learning_rate, betas=opt.betas)
     schedulerD = CosineLRWarmup(optimD, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
-
 
     train_dataset = UnpairedImageDataset(opt.trainA_path, opt.trainB_path, opt.input_resolution, opt.data_extention, opt.cache_images)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=2)
@@ -92,13 +94,12 @@ def train(opt_path):
             # Training G
             set_requires_grad([netD, netD_BA], False)
             netG.zero_grad()
-            logits_GA = netD(GA).sigmoid()
+            logits_GA = netD(GA)
             loss_G_GA = opt.coef_adv*loss_fn(logits_GA, target_is_real=True)
-            logits_GB = netD_BA(GB).sigmoid()
+            logits_GB = netD_BA(GB)
             loss_G_GB = opt.coef_adv*loss_fn(logits_GB, target_is_real=True)
             loss_G_cycle_A = opt.coef_cycle*F.l1_loss(A, A_rec)
             loss_G_cycle_B = opt.coef_cycle*F.l1_loss(B, B_rec)
-
 
             loss_G = loss_G_GA + loss_G_GB + loss_G_cycle_A + loss_G_cycle_B
             loss_G.backward()
@@ -110,18 +111,20 @@ def train(opt_path):
             # Training D
             set_requires_grad([netD, netD_BA], True)
             netD.zero_grad()
-            logits_B = netD(B).sigmoid()
+            GA = GA_pool.query(GA)
+            GB = GB_pool.query(GB)
+            logits_B = netD(B)
             loss_D_B = opt.coef_adv*loss_fn(logits_B, target_is_real=True)
-            logits_GA = netD(GA.detach()).sigmoid()
+            logits_GA = netD(GA.detach())
             loss_D_GA = opt.coef_adv*loss_fn(logits_GA, target_is_real=False)
             loss_D_AB = loss_D_B + loss_D_GA
 
-            logits_D_BA_A = netD_BA(A).sigmoid()
+            logits_D_BA_A = netD_BA(A)
             loss_D_BA_A = opt.coef_adv*loss_fn(logits_D_BA_A, target_is_real=True)
-            logits_D_BA_GB = netD_BA(GB.detach()).sigmoid()
+            logits_D_BA_GB = netD_BA(GB.detach())
             loss_D_BA_GB = opt.coef_adv*loss_fn(logits_D_BA_GB, target_is_real=False)
             loss_D_BA = loss_D_BA_A + loss_D_BA_GB
-            loss_D = loss_D_AB + loss_D_BA
+            loss_D = (loss_D_AB + loss_D_BA) * 0.5
             loss_D.backward()
 
             if opt.use_grad_clip: torch.nn.utils.clip_grad_norm_(netD.parameters(), opt.grad_clip_val)
