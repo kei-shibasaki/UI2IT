@@ -16,11 +16,10 @@ from PIL import Image
 
 from models.mspc import PerturbationNetwork, grid_sample
 from datasets.dataset import UnpairedImageDataset, SimgleImageDataset
-from scripts.losses import GANLoss
-from scripts.utils import load_option, pad_tensor, send_line_notify, tensor2ndarray, arrange_images
-from scripts.training_utils import set_requires_grad
+from scripts.losses import GANLoss, cal_gradient_penalty
+from scripts.utils import load_option, pad_tensor, send_line_notify, tensor2ndarray, arrange_images, set_requires_grad
 from scripts.cal_fid import get_fid
-from scripts.scheduler import LinearLRWarmup
+from scripts.scheduler import CosineLRWarmup, LinearLRWarmup2
 
 
 def train(opt_path):
@@ -40,8 +39,8 @@ def train(opt_path):
     os.makedirs(log_dir, exist_ok=True)
 
     log_items_train = [
-        'total_step','lr', 'loss_G_GA', 'loss_G_GTA', 'gta_tga_distance_G', 'loss_G_idt', 'loss_G',
-        'loss_D_B', 'loss_D_GA', 'loss_D_TB', 'loss_D_GTA', 'gta_tga_distance_D', 'loss_pert_constraint_D', 'loss_D'
+        'total_step','lr', 'loss_G_fake', 'gta_tga_distance_G', 'loss_G_idt', 'loss_G_idt_perturbation', 'loss_G',
+        'loss_D_real', 'loss_D_fake', 'gta_tga_distance_D', 'loss_pert_constraint_D', 'loss_D'
     ]
     log_items_val = [
         'total_step', 'fid_score'
@@ -57,26 +56,23 @@ def train(opt_path):
     
     loss_fn = GANLoss(gan_mode='lsgan').to(device)
     network_module_G = importlib.import_module(opt.network_module_G)
-    network_module_D = importlib.import_module(opt.network_module_D)
-
     netG = getattr(network_module_G, opt.model_type_G)(**opt.netG).to(device)
+    network_module_D = importlib.import_module(opt.network_module_D)
     netD = getattr(network_module_D, opt.model_type_D)(opt.netD).to(device)
-    netD_perturbation = getattr(network_module_D, opt.model_type_D)(opt.netD).to(device)
     netP = PerturbationNetwork(**opt.netP).to(device)
 
     optimG = torch.optim.Adam(netG.parameters(), lr=opt.learning_rate, betas=opt.betas)
-    schedulerG = LinearLRWarmup(optimG, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
-    optimD = torch.optim.Adam(itertools.chain(netD.parameters(), netD_perturbation.parameters()), lr=opt.learning_rate, betas=opt.betas)
-    schedulerD = LinearLRWarmup(optimD, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
+    schedulerG = LinearLRWarmup2(optimG, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_0, opt.step_1, opt.step_2)
+    optimD = torch.optim.Adam(netD.parameters(), lr=opt.learning_rate, betas=opt.betas)
+    schedulerD = LinearLRWarmup2(optimD, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_0, opt.step_1, opt.step_2)
     optimP = torch.optim.Adam(netP.parameters(), lr=opt.learning_rate, betas=opt.betas)
-    schedulerP = LinearLRWarmup(optimP, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
+    schedulerP = LinearLRWarmup2(optimP, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_0, opt.step_1, opt.step_2)
 
     if opt.pretrained_path:
         state_dict = torch.load(opt.pretrained_path, map_location=device)
         netG.load_state_dict(state_dict['netG_state_dict'], strict=True)
         netP.load_state_dict(state_dict['netP_state_dict'], strict=True)
         netD.load_state_dict(state_dict['netD_state_dict'], strict=True)
-        netD_perturbation.load_state_dict(state_dict['netD_perturbation_state_dict'], strict=True)
         optimG.load_state_dict(state_dict['optimG_state_dict'])
         optimP.load_state_dict(state_dict['optimP_state_dict'])
         optimD.load_state_dict(state_dict['optimD_state_dict'])
@@ -94,7 +90,6 @@ def train(opt_path):
     total_step = 0 if opt.resume_step is None else opt.resume_step
     best_fid = float('inf')
     netD.train()
-    netD_perturbation.train()
     netP.train()
     netG.train()
 
@@ -104,63 +99,67 @@ def train(opt_path):
             B = data['B'].to(device)
             # G(A)
             GA = netG(A)
+            # G(B)
+            GB = netG(B)
+            
+            # Training D
+            set_requires_grad([netD, netP], True)
+            netP.zero_grad()
+            netD.zero_grad()
+
             # T(A)
             grid_A, TA, constraint_A, cordinate_contraint_A = netP(A)
             # T(B)
             grid_B, TB, constraint_B, cordinate_contraint_B = netP(B)
             # G(T(A))
-            GTA = netG(TA.detach())
-            # T(G(A))
-            TGA = grid_sample(GA, grid_A.detach())
-            # G(B)
-            GB = netG(B)
-
-            # Training G
-            set_requires_grad([netD, netD_perturbation, netP], False)
-            netG.zero_grad()
-            logits_GA = netD(GA)
-            logits_GTA = netD_perturbation(GTA)
-            loss_G_GA = opt.coef_adv*loss_fn(logits_GA, target_is_real=True)
-            loss_G_GTA = opt.coef_adv*loss_fn(logits_GTA, target_is_real=True)
-            gta_tga_distance_G = opt.coef_mspc*F.l1_loss(GTA, TGA)
-            loss_G_idt = opt.coef_idt*F.l1_loss(B, GB)
-            
-            loss_G = loss_G_GA + loss_G_GTA + gta_tga_distance_G + loss_G_idt
-            loss_G.backward()
-            if opt.use_grad_clip: torch.nn.utils.clip_grad_norm_(netG.parameters(), opt.grad_clip_val)
-            optimG.step()
-            schedulerG.step()
-
-            # Training D
-            set_requires_grad([netD, netD_perturbation, netP], True)
-            netP.zero_grad()
-            netD.zero_grad()
-            netD_perturbation.zero_grad()
-
             GTA = netG(TA)
+            # T(G(A))
             TGA = grid_sample(GA.detach(), grid_A)
-            logits_B = netD(B)
-            logits_GA = netD(GA.detach())
-            logits_TB = netD_perturbation(TB)
-            logits_GTA = netD_perturbation(GTA)
+
+            logits_D_real = netD(torch.cat([B, TB], dim=1))
+            logits_D_fake = netD(torch.cat([GA.detach(), GTA], dim=1))
             gta_tga_distance_D = opt.coef_mspc*F.l1_loss(GTA, TGA)
 
-            loss_D_B = opt.coef_adv*loss_fn(logits_B, target_is_real=True)
-            loss_D_GA = opt.coef_adv*loss_fn(logits_GA, target_is_real=False)
-            loss_D_TB = opt.coef_adv*loss_fn(logits_TB, target_is_real=True)
-            loss_D_GTA = opt.coef_adv*loss_fn(logits_GTA, target_is_real=False)
+            loss_D_real = opt.coef_adv*loss_fn(logits_D_real, target_is_real=True)
+            loss_D_fake = opt.coef_adv*loss_fn(logits_D_fake, target_is_real=False)
+
             loss_pert_constraint_D = -opt.coef_constraint*(constraint_A + cordinate_contraint_A + constraint_B + cordinate_contraint_B)
             
-            loss_D = loss_D_B + loss_D_GA + loss_D_TB + loss_D_GTA + gta_tga_distance_D + loss_pert_constraint_D
+            loss_D = loss_D_real + loss_D_fake + gta_tga_distance_D + loss_pert_constraint_D
 
             loss_D.backward()
             if opt.use_grad_clip: torch.nn.utils.clip_grad_norm_(netD.parameters(), opt.grad_clip_val)
-            if opt.use_grad_clip: torch.nn.utils.clip_grad_norm_(netD_perturbation.parameters(), opt.grad_clip_val)
             if opt.use_grad_clip: torch.nn.utils.clip_grad_norm_(netP.parameters(), opt.grad_clip_val)
             optimD.step()
             optimP.step()
             schedulerD.step()
             schedulerP.step()
+            
+            # Training G
+            set_requires_grad([netD, netP], False)
+            netG.zero_grad()
+            # T(A)
+            grid_A, TA, constraint_A, cordinate_contraint_A = netP(A)
+            # T(B)
+            grid_B, TB, constraint_B, cordinate_contraint_B = netP(B)
+            # G(T(A))
+            GTA = netG(TA)
+            # T(G(A))
+            TGA = grid_sample(GA, grid_A)
+            # G(T(B))
+            GTB = netG(TB)
+
+            logits_G_fake = netD(torch.cat([GA, GTA], dim=1))
+            loss_G_fake = opt.coef_adv*loss_fn(logits_G_fake, target_is_real=True)
+            gta_tga_distance_G = opt.coef_mspc*F.l1_loss(GTA, TGA)
+            loss_G_idt = opt.coef_idt*F.l1_loss(B, GB)
+            loss_G_idt_perturbation = opt.coef_idt*F.l1_loss(TB, GTB)
+            
+            loss_G = loss_G_fake + gta_tga_distance_G + loss_G_idt + loss_G_idt_perturbation
+            loss_G.backward()
+            if opt.use_grad_clip: torch.nn.utils.clip_grad_norm_(netG.parameters(), opt.grad_clip_val)
+            optimG.step()
+            schedulerG.step()
             
             total_step += 1
 
@@ -221,7 +220,7 @@ def train(opt_path):
                     os.makedirs(out_dir_TGA, exist_ok=True)
                     A, GA, TA, GTA, TGA = map(lambda x: Image.fromarray(x), [A, GA, TA, GTA, TGA])
                     A.save(os.path.join(out_dir_A, f'{i:04}.{opt.save_extention}'))
-                    GA.save(os.path.join(out_dir_GA, f'{i:04}.png'))
+                    GA.save(os.path.join(out_dir_GA, f'{i:04}.{opt.save_extention}'))
                     TA.save(os.path.join(out_dir_TA, f'{i:04}.{opt.save_extention}'))
                     GTA.save(os.path.join(out_dir_GTA, f'{i:04}.{opt.save_extention}'))
                     TGA.save(os.path.join(out_dir_TGA, f'{i:04}.{opt.save_extention}'))
@@ -255,7 +254,6 @@ def train(opt_path):
                         'netG_state_dict': netG.state_dict(),
                         'netP_state_dict': netP.state_dict(),
                         'netD_state_dict': netD.state_dict(),
-                        'netD_perturbation_state_dict': netD_perturbation.state_dict(), 
                         'optimG_state_dict': optimG.state_dict(),
                         'optimP_state_dict': optimP.state_dict(),
                         'optimD_state_dict': optimD.state_dict(),
@@ -264,7 +262,7 @@ def train(opt_path):
                         'schedularD_state_dict': schedulerD.state_dict(),
                     }, os.path.join(model_ckpt_dir, f'{opt.name}_best.ckpt'))
                 
-                if total_step%opt.nortify_freq==0 and opt.enable_line_nortify:
+                if total_step%opt.save_freq==0 and opt.enable_line_nortify:
                     with open('line_nortify_token.json', 'r', encoding='utf-8') as fp:
                         token = json.load(fp)['token']
                     send_line_notify(token, f'{opt.name} Step: {total_step}\n{lg}\n{txt}')
@@ -275,7 +273,6 @@ def train(opt_path):
                     'netG_state_dict': netG.state_dict(),
                     'netP_state_dict': netP.state_dict(),
                     'netD_state_dict': netD.state_dict(),
-                    'netD_perturbation_state_dict': netD_perturbation.state_dict(), 
                     'optimG_state_dict': optimG.state_dict(),
                     'optimP_state_dict': optimP.state_dict(),
                     'optimD_state_dict': optimD.state_dict(),
@@ -290,7 +287,6 @@ def train(opt_path):
                     'netG_state_dict': netG.state_dict(),
                     'netP_state_dict': netP.state_dict(),
                     'netD_state_dict': netD.state_dict(),
-                    'netD_perturbation_state_dict': netD_perturbation.state_dict(), 
                     'optimG_state_dict': optimG.state_dict(),
                     'optimP_state_dict': optimP.state_dict(),
                     'optimD_state_dict': optimD.state_dict(),

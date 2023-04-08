@@ -16,10 +16,11 @@ from PIL import Image
 
 from models.mspc import PerturbationNetwork, grid_sample
 from datasets.dataset import UnpairedImageDataset, SimgleImageDataset
-from scripts.losses import GANLoss, cal_gradient_penalty
-from scripts.utils import load_option, pad_tensor, send_line_notify, tensor2ndarray, arrange_images, set_requires_grad
+from scripts.losses import GANLoss
+from scripts.utils import load_option, pad_tensor, send_line_notify, tensor2ndarray, arrange_images
+from scripts.training_utils import set_requires_grad
 from scripts.cal_fid import get_fid
-from scripts.optimizer import CosineLRWarmup, LinearLRWarmup
+from scripts.scheduler import LinearLRWarmup
 
 
 def train(opt_path):
@@ -54,7 +55,7 @@ def train(opt_path):
     
     shutil.copy(opt_path, f'./experiments/{opt.name}/{os.path.basename(opt_path)}')
     
-    loss_fn = GANLoss(gan_mode='lsgan').to(device)
+    loss_fn = GANLoss(gan_mode='vanilla').to(device)
     network_module_G = importlib.import_module(opt.network_module_G)
     netG = getattr(network_module_G, opt.model_type_G)(**opt.netG).to(device)
     network_module_D = importlib.import_module(opt.network_module_D)
@@ -68,6 +69,19 @@ def train(opt_path):
     schedulerD = LinearLRWarmup(optimD, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
     optimP = torch.optim.Adam(netP.parameters(), lr=opt.learning_rate, betas=opt.betas)
     schedulerP = LinearLRWarmup(optimP, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
+
+    if opt.pretrained_path:
+        state_dict = torch.load(opt.pretrained_path, map_location=device)
+        netG.load_state_dict(state_dict['netG_state_dict'], strict=True)
+        netP.load_state_dict(state_dict['netP_state_dict'], strict=True)
+        netD.load_state_dict(state_dict['netD_state_dict'], strict=True)
+        netD_perturbation.load_state_dict(state_dict['netD_perturbation_state_dict'], strict=True)
+        optimG.load_state_dict(state_dict['optimG_state_dict'])
+        optimP.load_state_dict(state_dict['optimP_state_dict'])
+        optimD.load_state_dict(state_dict['optimD_state_dict'])
+        schedulerG.load_state_dict(state_dict['schedularG_state_dict'])
+        schedulerP.load_state_dict(state_dict['schedularP_state_dict'])
+        schedulerD.load_state_dict(state_dict['schedularD_state_dict'])
 
     train_dataset = UnpairedImageDataset(opt.trainA_path, opt.trainB_path, opt.input_resolution, opt.data_extention, opt.cache_images)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=2)
@@ -85,7 +99,6 @@ def train(opt_path):
 
     for e in range(1, 42*opt.steps):
         for i, data in enumerate(train_loader):
-            # [(B,C,H,W)]*F -> (B,F,C,H,W)
             A = data['A'].to(device)
             B = data['B'].to(device)
             # G(A)
@@ -180,7 +193,6 @@ def train(opt_path):
                 netG.eval()
                 netP.eval()
                 for i, A in enumerate(val_loader):
-                    # [(B,C,H,W)]*F -> (B,F,C,H,W)
                     A = A.to(device)
                     b,c,h,w = A.shape
                     A = pad_tensor(A, divisible_by=2**3)
@@ -205,7 +217,7 @@ def train(opt_path):
                     os.makedirs(out_dir_TGA, exist_ok=True)
                     A, GA, TA, GTA, TGA = map(lambda x: Image.fromarray(x), [A, GA, TA, GTA, TGA])
                     A.save(os.path.join(out_dir_A, f'{i:04}.{opt.save_extention}'))
-                    GA.save(os.path.join(out_dir_GA, f'{i:04}.{opt.save_extention}'))
+                    GA.save(os.path.join(out_dir_GA, f'{i:04}.png'))
                     TA.save(os.path.join(out_dir_TA, f'{i:04}.{opt.save_extention}'))
                     GTA.save(os.path.join(out_dir_GTA, f'{i:04}.{opt.save_extention}'))
                     TGA.save(os.path.join(out_dir_TGA, f'{i:04}.{opt.save_extention}'))
@@ -239,7 +251,7 @@ def train(opt_path):
                         'netG_state_dict': netG.state_dict(),
                         'netP_state_dict': netP.state_dict(),
                         'netD_state_dict': netD.state_dict(),
-                        'netD_perturbation': netD_perturbation.state_dict(), 
+                        'netD_perturbation_state_dict': netD_perturbation.state_dict(), 
                         'optimG_state_dict': optimG.state_dict(),
                         'optimP_state_dict': optimP.state_dict(),
                         'optimD_state_dict': optimD.state_dict(),
@@ -259,7 +271,7 @@ def train(opt_path):
                     'netG_state_dict': netG.state_dict(),
                     'netP_state_dict': netP.state_dict(),
                     'netD_state_dict': netD.state_dict(),
-                    'netD_perturbation': netD_perturbation.state_dict(), 
+                    'netD_perturbation_state_dict': netD_perturbation.state_dict(), 
                     'optimG_state_dict': optimG.state_dict(),
                     'optimP_state_dict': optimP.state_dict(),
                     'optimD_state_dict': optimD.state_dict(),
@@ -274,7 +286,7 @@ def train(opt_path):
                     'netG_state_dict': netG.state_dict(),
                     'netP_state_dict': netP.state_dict(),
                     'netD_state_dict': netD.state_dict(),
-                    'netD_perturbation': netD_perturbation.state_dict(), 
+                    'netD_perturbation_state_dict': netD_perturbation.state_dict(), 
                     'optimG_state_dict': optimG.state_dict(),
                     'optimP_state_dict': optimP.state_dict(),
                     'optimD_state_dict': optimD.state_dict(),

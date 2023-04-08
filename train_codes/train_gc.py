@@ -17,7 +17,7 @@ from datasets.dataset import UnpairedImageDataset
 from scripts.losses import GANLoss, cal_gradient_penalty
 from scripts.utils import load_option, pad_tensor, send_line_notify, tensor2ndarray, arrange_images
 from scripts.cal_fid import get_fid
-from scripts.optimizer import CosineLRWarmup
+from scripts.scheduler import CosineLRWarmup
 
 
 def train(opt_path):

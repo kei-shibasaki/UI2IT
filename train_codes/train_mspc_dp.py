@@ -58,17 +58,17 @@ def train(opt_path):
     loss_fn = GANLoss(gan_mode='lsgan').to(device)
     network_module_G = importlib.import_module(opt.network_module_G)
     network_module_D = importlib.import_module(opt.network_module_D)
-
+    
     netG = getattr(network_module_G, opt.model_type_G)(**opt.netG).to(device)
     netD = getattr(network_module_D, opt.model_type_D)(opt.netD).to(device)
     netD_perturbation = getattr(network_module_D, opt.model_type_D)(opt.netD).to(device)
     netP = PerturbationNetwork(**opt.netP).to(device)
 
     optimG = torch.optim.Adam(netG.parameters(), lr=opt.learning_rate, betas=opt.betas)
-    schedulerG = LinearLRWarmup(optimG, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
     optimD = torch.optim.Adam(itertools.chain(netD.parameters(), netD_perturbation.parameters()), lr=opt.learning_rate, betas=opt.betas)
-    schedulerD = LinearLRWarmup(optimD, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
     optimP = torch.optim.Adam(netP.parameters(), lr=opt.learning_rate, betas=opt.betas)
+    schedulerG = LinearLRWarmup(optimG, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
+    schedulerD = LinearLRWarmup(optimD, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
     schedulerP = LinearLRWarmup(optimP, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
 
     if opt.pretrained_path:
@@ -83,6 +83,8 @@ def train(opt_path):
         schedulerG.load_state_dict(state_dict['schedularG_state_dict'])
         schedulerP.load_state_dict(state_dict['schedularP_state_dict'])
         schedulerD.load_state_dict(state_dict['schedularD_state_dict'])
+    
+    netG, netD, netD_perturbation, netP = map(lambda x: nn.DataParallel(x, device_ids=[0,1]), [netG, netD, netD_perturbation, netP])
 
     train_dataset = UnpairedImageDataset(opt.trainA_path, opt.trainB_path, opt.input_resolution, opt.data_extention, opt.cache_images)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=2)
@@ -234,7 +236,7 @@ def train(opt_path):
                 
                 fid_score = get_fid([out_dir_GA, opt.testB_path], batch_size=32, dims=2048, num_workers=2) 
                     
-                txt = f'FID: {fid_score:f}'
+                txt = f'elepsed: {elapsed}, eta: {eta}, FID: {fid_score:f}'
                 # print(txt)
                 with open(log_path, mode='a', encoding='utf-8') as fp:
                     fp.write(txt+'\n')
@@ -252,10 +254,10 @@ def train(opt_path):
                     best_fid = fid_score
                     torch.save({
                         'total_step': total_step,
-                        'netG_state_dict': netG.state_dict(),
-                        'netP_state_dict': netP.state_dict(),
-                        'netD_state_dict': netD.state_dict(),
-                        'netD_perturbation_state_dict': netD_perturbation.state_dict(), 
+                        'netG_state_dict': netG.module.state_dict(),
+                        'netP_state_dict': netP.module.state_dict(),
+                        'netD_state_dict': netD.module.state_dict(),
+                        'netD_perturbation_state_dict': netD_perturbation.module.state_dict(), 
                         'optimG_state_dict': optimG.state_dict(),
                         'optimP_state_dict': optimP.state_dict(),
                         'optimD_state_dict': optimD.state_dict(),
@@ -272,10 +274,10 @@ def train(opt_path):
             if total_step%opt.save_freq==0:
                 torch.save({
                     'total_step': total_step,
-                    'netG_state_dict': netG.state_dict(),
-                    'netP_state_dict': netP.state_dict(),
-                    'netD_state_dict': netD.state_dict(),
-                    'netD_perturbation_state_dict': netD_perturbation.state_dict(), 
+                    'netG_state_dict': netG.module.state_dict(),
+                    'netP_state_dict': netP.module.state_dict(),
+                    'netD_state_dict': netD.module.state_dict(),
+                    'netD_perturbation_state_dict': netD_perturbation.module.state_dict(), 
                     'optimG_state_dict': optimG.state_dict(),
                     'optimP_state_dict': optimP.state_dict(),
                     'optimD_state_dict': optimD.state_dict(),
@@ -287,10 +289,10 @@ def train(opt_path):
             if total_step==opt.steps:
                 torch.save({
                     'total_step': total_step,
-                    'netG_state_dict': netG.state_dict(),
-                    'netP_state_dict': netP.state_dict(),
-                    'netD_state_dict': netD.state_dict(),
-                    'netD_perturbation_state_dict': netD_perturbation.state_dict(), 
+                    'netG_state_dict': netG.module.state_dict(),
+                    'netP_state_dict': netP.module.state_dict(),
+                    'netD_state_dict': netD.module.state_dict(),
+                    'netD_perturbation_state_dict': netD_perturbation.module.state_dict(), 
                     'optimG_state_dict': optimG.state_dict(),
                     'optimP_state_dict': optimP.state_dict(),
                     'optimD_state_dict': optimD.state_dict(),

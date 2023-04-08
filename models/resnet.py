@@ -113,6 +113,14 @@ class ResnetGenerator(nn.Module):
 
         self.model = nn.Sequential(*model)
 
+        self.apply(self.init_weights)
+
+    def init_weights(self, module):
+        if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
+            module.weight.data.normal_(mean=0, std=0.02)
+            if module.bias is not None:
+                module.bias.data.zero_()
+
     def forward(self, input):
         """Standard forward"""
         return self.model(input)

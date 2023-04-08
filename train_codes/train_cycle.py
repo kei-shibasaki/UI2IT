@@ -15,10 +15,11 @@ from easydict import EasyDict
 from PIL import Image
 
 from datasets.dataset import UnpairedImageDataset, SimgleImageDataset
-from scripts.losses import GANLoss, cal_gradient_penalty
-from scripts.utils import load_option, pad_tensor, send_line_notify, tensor2ndarray, arrange_images, set_requires_grad, ImagePool
+from scripts.losses import GANLoss
+from scripts.utils import load_option, pad_tensor, send_line_notify, tensor2ndarray, arrange_images
+from scripts.training_utils import set_requires_grad, ImagePool
 from scripts.cal_fid import get_fid
-from scripts.optimizer import CosineLRWarmup
+from scripts.scheduler import CosineLRWarmup
 
 
 def train(opt_path):
@@ -124,7 +125,7 @@ def train(opt_path):
             logits_D_BA_GB = netD_BA(GB.detach())
             loss_D_BA_GB = opt.coef_adv*loss_fn(logits_D_BA_GB, target_is_real=False)
             loss_D_BA = loss_D_BA_A + loss_D_BA_GB
-            loss_D = (loss_D_AB + loss_D_BA) * 0.5
+            loss_D = loss_D_AB + loss_D_BA
             loss_D.backward()
 
             if opt.use_grad_clip: torch.nn.utils.clip_grad_norm_(netD.parameters(), opt.grad_clip_val)

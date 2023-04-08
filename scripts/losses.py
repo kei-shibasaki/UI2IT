@@ -99,3 +99,10 @@ def cal_gradient_penalty(netD, real_data, fake_data, device, type='mixed', const
         return gradient_penalty, gradients
     else:
         return 0.0, None
+
+def calc_r1_loss(netD, input_data):
+    input_data.requires_grad_(True)
+    pred = netD(input_data)
+    grad_real = torch.autograd.grad(outputs=pred.sum(), inputs=input_data, create_graph=True, retain_graph=True, only_inputs=True)[0]
+    grad_penalty = grad_real.pow(2).reshape(grad_real.shape[0], -1).sum(1).mean()
+    return grad_penalty

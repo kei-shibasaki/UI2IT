@@ -8,6 +8,8 @@ from tqdm import tqdm
 import cv2 
 from PIL import Image
 import pandas as pd 
+import glob 
+import os 
 
 device = torch.device('cuda')
 
@@ -76,7 +78,7 @@ def check_fid():
 def check_schedular():
     import matplotlib.pyplot as plt
     from models.lptn import LPTN
-    from scripts.optimizer import CosineLRWarmup
+    from scripts.scheduler import CosineLRWarmup
     from scripts.utils import load_option
 
     opt = EasyDict(load_option('config/config_lptn.json'))
@@ -166,6 +168,35 @@ def rewrite_csv():
             else:
                 fp.write(line)
 
+def test_u2net():
+    from models.u2net import U2NETP, U2NET
+    from models.resnet import ResnetGenerator
+    import torchinfo
+
+    b,c,h,w = 1,3,256,256
+    x = torch.rand((b,c,h,w))
+    net = U2NETP(out_ch=3)
+    #net = ResnetGenerator(3,3,64,n_blocks=9)
+    #out = net(x)
+    torchinfo.summary(net, input_data=[x])
+    
+def test_compare_img():
+    from scripts.utils import arrange_images
+    images_dirs = [
+        'experiments/TEST_cycle_horse2zebra/generated/001000/A',
+        'experiments/TEST_cycle_horse2zebra/generated/100000/GA', 
+        'experiments/TEST_cycle_horse2zebra_ema/generated/100000/GA', 
+    ]
+    images_list = [sorted(glob.glob(os.path.join(d, '*.jpg'))) for d in images_dirs]
+    n_images = len(images_list[0])
+    n_row = len(images_list)
+    #print(n_images, n_row)
+
+    for i in tqdm(range(n_images)):
+        images_path = [images_list[j][i] for j in range(n_row)]
+        images = [Image.open(img_path).convert('RGB') for img_path in images_path]
+        compare = arrange_images(images)
+        compare.save(f'temp/{i:03}.jpg')
 
 if __name__=='__main__':
-    check_netP()
+    test_compare_img()

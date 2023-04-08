@@ -44,7 +44,7 @@ def plt_losses_val(csv_path, columns_to_plot, out_path):
 
 
 if __name__=='__main__':
-    log_name = 'MSPC_paper'
+    log_name = 'TEST_MSPC_anime'
     log_path = f'experiments/{log_name}/logs'
     train_csv_path = os.path.join(log_path, f'train_losses_{log_name}.csv')
     val_csv_path = os.path.join(log_path, f'test_losses_{log_name}.csv')

@@ -8,7 +8,7 @@
     "cache_images": true,
     "enable_line_nortify": true,
 
-    "name": "MSPC_paper",
+    "name": "MSPC_horse2zebra_b04_lsgan_idt",
     "input_resolution": [256, 256],
     "network_module_G": "models.resnet",
     "model_type_G": "ResnetGenerator",
@@ -35,7 +35,7 @@
         "pert_threshold": 2.0
     },
 
-    "batch_size": 1,
+    "batch_size": 4,
     "steps": 220000,
     "use_grad_clip": false,
     "grad_clip_val": 0.1,
@@ -44,7 +44,7 @@
     "coef_constraint": 0.5,
     "coef_idt": 1,
     
-    "lr_w": 1e-4, 
+    "lr_w": 2e-4, 
     "lr_max": 2e-4, 
     "lr_min": 2e-4, 
     "step_w": 110000, 
@@ -55,7 +55,8 @@
 
     "print_freq": 100,
     "eval_freq": 2000,
-    "save_freq": 50000,
+    "save_freq": 10000,
+    "nortify_freq": 50000,
     "pretrained_path": null,
     "resume_step": 0,
     "create_new_log": true

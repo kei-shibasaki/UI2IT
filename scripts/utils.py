@@ -79,28 +79,6 @@ def send_line_notify(line_notify_token, nortification_message):
     data = {'message': f'{nortification_message}'}
     requests.post(line_notify_api, headers=headers, data=data)
 
-def convert_state_dict(state_dict):
-    new_state_dict = OrderedDict()
-    keys, values = [], []
-    for key, value in state_dict.items():
-        if 'block' in key:
-            temp = key.split('.')
-            temp.insert(2, 'op')
-            key = '.'.join(temp)
-        keys.append(key)
-        values.append(value)
-    
-    for key, value in zip(keys, values):
-        new_state_dict[key] = value
-    
-    return new_state_dict
-
-def load_fake_img(b,f,c,h,w):
-    img = read_img('scripts/ai_pet_family.png').unsqueeze(0)
-    img = F.interpolate(img, size=[h,w], mode='bilinear', align_corners=False).unsqueeze(1)
-    img = img.repeat(b,f,1,1,1)
-    return img
-
 def arrange_images(images):
     # Input: list of PIL Image
     n = len(images)
@@ -110,75 +88,3 @@ def arrange_images(images):
         out.paste(img, box=(i*w, 0))
     return out
 
-def convert_state_dict_to_half(state_dict):
-    new_state_dict = OrderedDict()
-    keys, values = [], []
-    for key, value in state_dict.items():
-        if 'temp2' in key:
-            continue
-        keys.append(key)
-        values.append(value)
-    
-    for key, value in zip(keys, values):
-        new_state_dict[key] = value
-    
-    return new_state_dict
-
-def set_requires_grad(nets, requires_grad=False):
-    """Set requies_grad=Fasle for all the networks to avoid unnecessary computations
-    Parameters:
-        nets (network list)   -- a list of networks
-        requires_grad (bool)  -- whether the networks require gradients or not
-    """
-    if not isinstance(nets, list):
-        nets = [nets]
-    for net in nets:
-        if net is not None:
-            for param in net.parameters():
-                param.requires_grad = requires_grad
-
-class ImagePool():
-    """This class implements an image buffer that stores previously generated images.
-    This buffer enables us to update discriminators using a history of generated images
-    rather than the ones produced by the latest generators.
-    """
-
-    def __init__(self, pool_size):
-        """Initialize the ImagePool class
-        Parameters:
-            pool_size (int) -- the size of image buffer, if pool_size=0, no buffer will be created
-        """
-        self.pool_size = pool_size
-        if self.pool_size > 0:  # create an empty pool
-            self.num_imgs = 0
-            self.images = []
-
-    def query(self, images):
-        """Return an image from the pool.
-        Parameters:
-            images: the latest generated images from the generator
-        Returns images from the buffer.
-        By 50/100, the buffer will return input images.
-        By 50/100, the buffer will return images previously stored in the buffer,
-        and insert the current images to the buffer.
-        """
-        if self.pool_size == 0:  # if the buffer size is 0, do nothing
-            return images
-        return_images = []
-        for image in images:
-            image = torch.unsqueeze(image.data, 0)
-            if self.num_imgs < self.pool_size:   # if the buffer is not full; keep inserting current images to the buffer
-                self.num_imgs = self.num_imgs + 1
-                self.images.append(image)
-                return_images.append(image)
-            else:
-                p = random.uniform(0, 1)
-                if p > 0.5:  # by 50% chance, the buffer will return a previously stored image, and insert the current image into the buffer
-                    random_id = random.randint(0, self.pool_size - 1)  # randint is inclusive
-                    tmp = self.images[random_id].clone()
-                    self.images[random_id] = image
-                    return_images.append(tmp)
-                else:       # by another 50% chance, the buffer will return the current image
-                    return_images.append(image)
-        return_images = torch.cat(return_images, 0)   # collect all the images and return
-        return return_images
