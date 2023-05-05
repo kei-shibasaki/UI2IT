@@ -35,17 +35,24 @@ def pad_tensor(x, divisible_by=8, mode='reflect'):
 
     return x
 
-def load_img_uint8(img_path, to_tensor=False):
-    img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)
+def load_img_uint8(img_path, is_gray=False, to_tensor=False):
+    if is_gray:
+        img = np.expand_dims(cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY), -1)
+    else:
+        img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)
+    
     if to_tensor:
         return torch.tensor(img, dtype=torch.uint8)
     else:
         return img
 
-def read_img(path):
+def read_img(path, is_gray=False):
     # Return tensor with (C, H, W), RGB, [0, 1].
+    bgr2rgb = False if is_gray else True
     img = cv2.imread(path).astype(np.float32) / 255.
-    img = img2tensor(img, bgr2rgb=True, float32=True)
+    if is_gray:
+        img = np.expand_dims(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), -1)
+    img = img2tensor(img, bgr2rgb, float32=True)
 
     return img
 
@@ -71,6 +78,7 @@ def tensor2ndarray(tensor):
     img = img.cpu().permute(0,2,3,1).numpy()
     img = np.clip(img, a_min=0, a_max=1.0)
     img = (img*255).astype(np.uint8)
+    
     return img
 
 def send_line_notify(line_notify_token, nortification_message):
@@ -87,4 +95,3 @@ def arrange_images(images):
     for i, img in enumerate(images):
         out.paste(img, box=(i*w, 0))
     return out
-

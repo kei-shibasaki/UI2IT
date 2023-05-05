@@ -14,6 +14,7 @@ def grid_sample(input, grid, canvas = None, mode='bilinear'):
         padded_output = output * output_mask + canvas * (1 - output_mask)
         return padded_output
 
+# compute_partial_repr関数は、2D空間内の点の座標を表す2つの3Dテンソルであるinput_pointsとcontrol_pointsを受け取り、各入力点と制御点のペア間の類似性を測定する「表現行列」を計算します。
 def compute_partial_repr(input_points, control_points):
     N = input_points.size(1)
     M = control_points.size(1)
@@ -81,57 +82,6 @@ class GradientReversal(torch.nn.Module):
     def forward(self, x):
         return GradientReversalFunction.apply(x, self.lambda_)
 
-class TPSGridGen(nn.Module):
-    def __init__(self,):
-        super(TPSGridGen, self).__init__()
-
-        self.register_buffer('padding_matrix', torch.zeros(3, 2))
-
-    def cal_matrix(self, target_height, target_width, target_control_points):
-        assert target_control_points.ndimension() == 3
-        assert target_control_points.size(2) == 2
-        N = target_control_points.size(1)
-        target_control_points = target_control_points.float()
-        device = torch.device(target_control_points.get_device())
-
-        # create padded kernel matrix
-        forward_kernel = torch.zeros(target_control_points.shape[0], N + 3, N + 3).to(device)
-        target_control_partial_repr = compute_partial_repr(target_control_points, target_control_points)
-        forward_kernel[:, :N, :N] = (target_control_partial_repr)
-        forward_kernel[:, :N, -3].fill_(1)
-        forward_kernel[:, -3, :N].fill_(1)
-        forward_kernel[:, :N, -2:] = target_control_points
-        forward_kernel[:, -2:, :N] = (target_control_points.transpose(1, 2))
-        # compute inverse matrix
-        inverse_kernel = torch.linalg.inv(forward_kernel)
-
-        # create target cordinate matrix
-        HW = target_height * target_width
-        target_coordinate = list(itertools.product(range(target_height), range(target_width)))
-        target_coordinate = torch.Tensor(target_coordinate).to(device) # HW x 2
-        Y, X = target_coordinate.split(1, dim=1)
-        Y = Y * 2 / (target_height - 1) - 1
-        X = X * 2 / (target_width - 1) - 1
-        target_coordinate = torch.cat([X, Y], dim=1)  # convert from (y, x) to (x, y)
-        target_coordinate = torch.cat([target_coordinate.unsqueeze(dim=0)]*target_control_points.shape[0], dim=0)
-        target_coordinate_partial_repr = compute_partial_repr(target_coordinate, target_control_points)
-        target_coordinate_repr = torch.cat([
-            target_coordinate_partial_repr, torch.ones(target_control_points.shape[0],HW, 1).to(device), target_coordinate
-        ], dim=2)
-        return inverse_kernel, target_coordinate_repr
-
-    def forward(self, source_control_points, target_control_points, target_height, target_width):
-        assert source_control_points.ndimension() == 3
-        assert source_control_points.size(1) == target_control_points.size(1)
-        assert source_control_points.size(2) == 2
-
-        inverse_kernel, target_coordinate_repr = self.cal_matrix(target_height, target_width, target_control_points)
-        batch_size = source_control_points.size(0)
-        Y = torch.cat([source_control_points, self.padding_matrix.expand(batch_size, 3, 2)], 1)
-        mapping_matrix = torch.matmul(inverse_kernel, Y)
-        source_coordinate = torch.matmul(target_coordinate_repr, mapping_matrix)
-        return source_coordinate
-
 class CNN(nn.Module):
     def __init__(self, num_output,in_c=3):
         super(CNN, self).__init__()
@@ -181,6 +131,63 @@ class UnBoundedGridLocNet(nn.Module):
         points = points.view(batch_size, -1, 2)
         points = self.reverse(points)
         return points
+
+# TPSGridGenは、制御点のセットが与えられると、薄板スプライン（TPS）グリッドを生成するモジュールです。
+# TPSは放射状基底関数の一種で、画像登録やワーピングによく使われる。
+# このモジュールで生成されたTPSグリッドは、与えられた制御点に基づいて、ある画像を別の画像にワープさせるために使用することができます。
+class TPSGridGen(nn.Module):
+    def __init__(self,):
+        super(TPSGridGen, self).__init__()
+
+        self.register_buffer('padding_matrix', torch.zeros(3, 2))
+
+    # cal_matrix関数は、TPSグリッドの生成に必要なカーネル行列とターゲット座標行列を算出する。
+    # カーネル行列は、サイズ (N+3)x(N+3) の正方行列であり、N は制御点の数である。
+    # ターゲット座標行列は (H*W)x(N+3) の行列であり、H と W はそれぞれターゲット画像の高さと幅である。
+    def cal_matrix(self, target_height, target_width, target_control_points):
+        assert target_control_points.ndimension() == 3
+        assert target_control_points.size(2) == 2
+        N = target_control_points.size(1)
+        target_control_points = target_control_points.float()
+        device = torch.device(target_control_points.get_device())
+
+        # create padded kernel matrix
+        forward_kernel = torch.zeros(target_control_points.shape[0], N + 3, N + 3).to(device)
+        target_control_partial_repr = compute_partial_repr(target_control_points, target_control_points)
+        forward_kernel[:, :N, :N] = (target_control_partial_repr)
+        forward_kernel[:, :N, -3].fill_(1)
+        forward_kernel[:, -3, :N].fill_(1)
+        forward_kernel[:, :N, -2:] = target_control_points
+        forward_kernel[:, -2:, :N] = (target_control_points.transpose(1, 2))
+        # compute inverse matrix
+        inverse_kernel = torch.linalg.inv(forward_kernel)
+
+        # create target cordinate matrix
+        HW = target_height * target_width
+        target_coordinate = list(itertools.product(range(target_height), range(target_width)))
+        target_coordinate = torch.Tensor(target_coordinate).to(device) # HW x 2
+        Y, X = target_coordinate.split(1, dim=1)
+        Y = Y * 2 / (target_height - 1) - 1
+        X = X * 2 / (target_width - 1) - 1
+        target_coordinate = torch.cat([X, Y], dim=1)  # convert from (y, x) to (x, y)
+        target_coordinate = torch.cat([target_coordinate.unsqueeze(dim=0)]*target_control_points.shape[0], dim=0)
+        target_coordinate_partial_repr = compute_partial_repr(target_coordinate, target_control_points)
+        target_coordinate_repr = torch.cat([
+            target_coordinate_partial_repr, torch.ones(target_control_points.shape[0],HW, 1).to(device), target_coordinate
+        ], dim=2)
+        return inverse_kernel, target_coordinate_repr
+
+    def forward(self, source_control_points, target_control_points, target_height, target_width):
+        assert source_control_points.ndimension() == 3
+        assert source_control_points.size(1) == target_control_points.size(1)
+        assert source_control_points.size(2) == 2
+
+        inverse_kernel, target_coordinate_repr = self.cal_matrix(target_height, target_width, target_control_points)
+        batch_size = source_control_points.size(0)
+        Y = torch.cat([source_control_points, self.padding_matrix.expand(batch_size, 3, 2)], 1)
+        mapping_matrix = torch.matmul(inverse_kernel, Y)
+        source_coordinate = torch.matmul(target_coordinate_repr, mapping_matrix)
+        return source_coordinate
 
 class PerturbationNetwork(nn.Module):
     def __init__(self, grid_size, crop_size, r1, r2, pert_threshold, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')):

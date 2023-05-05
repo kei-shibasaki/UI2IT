@@ -135,4 +135,5 @@ line_nortify_token.json
 experiments
 checkpoints
 comp
-temp
+temp*
+pretrained_networks

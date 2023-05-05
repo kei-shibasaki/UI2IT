@@ -15,8 +15,14 @@ device = torch.device('cuda')
 
 def check_mspc():
     from models.mspc import UnBoundedGridLocNet, TPSGridGen, grid_sample, scale_constraint
+    from scripts.utils import img2tensor
+
+    img = cv2.imread('lena.png')
+    img = cv2.resize(img, dsize=[256,256], interpolation=cv2.INTER_LINEAR)
+    A = img2tensor(img, bgr2rgb=True).unsqueeze(0).to(device)
+
     grid_size = 2
-    crop_size = 128
+    crop_size = 256
     r1 = r2 = 0.9
     b,c,h,w = 1,3,256,256
 
@@ -32,11 +38,11 @@ def check_mspc():
     loc = UnBoundedGridLocNet(grid_height=grid_size, grid_width=grid_size, target_control_point=target_control_points).to(device)
     tps = TPSGridGen().to(device)
 
-    A = torch.rand((b,c,h,w)).to(device)
-    B = torch.randn((b,c,h,w)).to(device)
+    #A = torch.rand((b,c,h,w)).to(device)
 
     print('-'*32)
-    source_control_points_A = loc(A)
+    downsampled = F.interpolate(A, [64, 64], mode='bilinear', align_corners=True)
+    source_control_points_A = loc(downsampled)
     print(source_control_points_A.shape)
     source_coordinate_A = tps(source_control_points_A, target_control_points, crop_size, crop_size)
     print(source_coordinate_A.shape)
@@ -48,24 +54,7 @@ def check_mspc():
     print(constraint_A)
     cordinate_contraint_A = ((source_coordinate_A.mean(dim=1).abs()).clamp(min=0.25)).mean()
     print(cordinate_contraint_A)
-
-    print('-'*32)
-    source_control_points_B = loc(B)
-    print(source_control_points_B.shape)
-    source_coordinate_B = tps(source_control_points_B, target_control_points, crop_size, crop_size)
-    print(source_coordinate_B.shape)
-    grid_B = source_coordinate_B.view(b, crop_size, crop_size, 2)
-    print(grid_B.shape)
-    pert_B = grid_sample(B, grid_B)
-    print(pert_B.shape)
-    constraint_B = scale_constraint(source_control_points_B, target_control_points)
-    print(constraint_B)
-    cordinate_contraint_B = ((source_coordinate_B.mean(dim=1).abs()).clamp(min=0.25)).mean()
-    print(cordinate_contraint_B)
-
-    print('-'*32)
-    loss_pert_constraint_D = (constraint_A+cordinate_contraint_A + constraint_B+cordinate_contraint_B)*0.5
-    print(loss_pert_constraint_D)
+    
 
 def check_fid():
     from scripts.cal_fid import get_fid
@@ -175,19 +164,96 @@ def test_u2net():
 
     b,c,h,w = 1,3,256,256
     x = torch.rand((b,c,h,w))
-    net = U2NETP(out_ch=3)
+    net = U2NETP(out_ch=1)
     #net = ResnetGenerator(3,3,64,n_blocks=9)
-    #out = net(x)
-    torchinfo.summary(net, input_data=[x])
+    out = net(x)
+    for o in out:
+        print(o.shape)
+    #torchinfo.summary(net, input_data=[x])
+
+def test_dataset():
+    from datasets.dataset import SingleImageDatasetWithMask, UnpairedImageDatasetWithMask
+
+    source_path = 'datasets/horse2zebra/testA'
+    source_mask_path = 'datasets/horse2zebra/testA_map/0'
+    target_path = 'datasets/horse2zebra/testB'
+    input_resolution = [256, 256]
+    dataset = SingleImageDatasetWithMask(source_path, source_mask_path, input_resolution, cache_images=True)
+    #dataset = UnpairedImageDatasetWithMask(source_path, source_mask_path, target_path, input_resolution, cache_images=True)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=4, shuffle=True, num_workers=2)
+
+    for data in dataloader:
+        #A = data['A']
+        #B = data['B']
+        #mask_A = data['mask_A']
+        #print(A.shape, B.shape)
+        #temp = torch.cat([A, mask_A], dim=1)
+        #print(temp.shape)
+        #exit()
+
+        img = data['img']
+        mask = data['mask']
+        print(img.shape, mask.shape)
+        exit()
+
+def test_net():
+    from models.network import Generator
+    from scripts.utils import load_option
+
+    opt = EasyDict(load_option('config/config_mspc_one_sal.json'))
+
+    b,c,h,w = 1,5,256,256
+    x = torch.rand((b,c,h,w)).to(device)
+
+    net = Generator(opt.netG).to(device)
+
+    out = net(x)
+
+    print(out.shape)
     
+def select_images():
+    generated_dir = 'experiments/TEST2/generated/220000'
+    labels = ['A', 'GA', 'GA_f', 'GA_b', 'M_A', 'TM_GA']
+    images = []
+    for label in labels:
+        if label=='GA':
+            img_path = os.path.join(generated_dir, label, f'0011.png')
+        else:
+            img_path = os.path.join(generated_dir, label, f'0011.jpg')
+        img = cv2.imread(img_path)
+        images.append(img)
+    
+    for img, label in zip(images, labels):
+        if label in ['GA_f', 'GA_b']:
+            mask = cv2.cvtColor(images[5], cv2.COLOR_BGR2GRAY)/255.0
+            if label=='GA_b':
+                mask = 1.0 - mask
+            mask = mask.reshape(256,256,1)
+            print(mask.shape, img.shape)
+            img = mask * img
+        cv2.imwrite(f'temp2/{label}.jpg', img)
+
 def test_compare_img():
     from scripts.utils import arrange_images
+
     images_dirs = [
-        'experiments/TEST_cycle_horse2zebra/generated/001000/A',
-        'experiments/TEST_cycle_horse2zebra/generated/100000/GA', 
-        'experiments/TEST_cycle_horse2zebra_ema/generated/100000/GA', 
+        'experiments/MSPC_horse2zebra_b04/generated/198000/A',
+        'experiments/MSPC_horse2zebra_b04/generated/198000/GA', 
+        'experiments/TEST2/generated/220000/GA', 
     ]
-    images_list = [sorted(glob.glob(os.path.join(d, '*.jpg'))) for d in images_dirs]
+    images_dirs = [
+        'experiments/MSPC_paper_anime/generated/196000/A',
+        'experiments/MSPC_paper_anime/generated/196000/GA', 
+        'experiments/mspc_sal_mistm_anime/generated/690000/GA', 
+    ]
+
+    images_list = []
+    for i, images_dir in enumerate(images_dirs):
+        if i==0:
+            images_list.append(sorted(glob.glob(os.path.join(images_dir, '*.jpg'))))
+        else:
+            images_list.append(sorted(glob.glob(os.path.join(images_dir, '*.png'))))
+
     n_images = len(images_list[0])
     n_row = len(images_list)
     #print(n_images, n_row)
@@ -196,7 +262,7 @@ def test_compare_img():
         images_path = [images_list[j][i] for j in range(n_row)]
         images = [Image.open(img_path).convert('RGB') for img_path in images_path]
         compare = arrange_images(images)
-        compare.save(f'temp/{i:03}.jpg')
+        compare.save(f'temp2/{i:03}.jpg')
 
 if __name__=='__main__':
     test_compare_img()

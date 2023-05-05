@@ -19,6 +19,7 @@ def plt_losses_train(csv_path, columns_to_plot, out_path):
         plt.plot(X, smoothing(df[col_name], 0.9), label=f'{col_name}', alpha=0.5)
     plt.grid()
     plt.legend()
+    plt.ylim(top=2)
     plt.xlabel('Step')
     plt.ylabel('Value')
     plt.savefig(out_path)
@@ -44,11 +45,11 @@ def plt_losses_val(csv_path, columns_to_plot, out_path):
 
 
 if __name__=='__main__':
-    log_name = 'TEST_MSPC_anime'
+    log_name = 'TEST'
     log_path = f'experiments/{log_name}/logs'
     train_csv_path = os.path.join(log_path, f'train_losses_{log_name}.csv')
     val_csv_path = os.path.join(log_path, f'test_losses_{log_name}.csv')
-    columns_to_plot = ['loss_G','loss_D']
+    columns_to_plot = ['loss_G','loss_D', 'loss_G_background_recons']
     out_path = os.path.join(log_path, f'train_losses_{log_name}.png')
     plt_losses_train(train_csv_path, columns_to_plot, out_path)
     columns_to_plot = ['fid_score']

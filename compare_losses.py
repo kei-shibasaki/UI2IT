@@ -49,11 +49,12 @@ def plt_losses_val(log_names, csv_paths, columns_to_plot, out_path):
 
 
 if __name__=='__main__':
-    #log_names = ['MSPC_anime', 'MSPC_anime_mod', 'MSPC_anime_mod_mod']
-    #log_names = ['MSPC_horse2zebra_b01', 'MSPC_horse2zebra_b01_lsgan', 'MSPC_horse2zebra_b01_lsgan_idt']
-    #log_names = ['MSPC_horse2zebra_b01', 'MSPC_horse2zebra_b01_lsgan', 'MSPC_horse2zebra_b01_lsgan_idt']
-    log_names = ['MSPC_horse2zebra_b01_lsgan', 'MSPC_horse2zebra_b01_lsgan_idt', 'MSPC_horse2zebra_b01_lsgan_clipD', 'MSPC_horse2zebra_b01_lsgan_clipD_later']
-    whole_log_name = 'MSPC_h2z_b01_lsgan'
+    #whole_log_name, log_names = 'MSPC_h2z_b04', ['MSPC_horse2zebra_b04', 'MSPC_horse2zebra_b04_lsgan_idt']
+    #whole_log_name, log_names = 'MSPC_h2z_one', ['MSPC_horse2zebra_b01_lsgan_idt', 'MSPC_one_horse2zebra_b01_lsgan_idt']
+    #whole_log_name, log_names = 'MSPC_h2z_bsize', ['MSPC_horse2zebra_b01_lsgan_idt', 'MSPC_horse2zebra_b04_lsgan_idt']
+    whole_log_name, log_names = 'MSPC_h2z_one', ['MSPC_horse2zebra_b01_lsgan_idt', 'MSPC_one_horse2zebra_b01_lsgan_idt']
+    whole_log_name, log_names = 'mycomp', ['MSPC_horse2zebra_b04', 'MSPC_one_horse2zebra_b01_lsgan_idt', 'TEST2']
+    whole_log_name, log_names = 'mspc_anime', ['MSPC_paper_anime', 'mspc_sal_mistm_anime']
 
     columns_to_plot = ['loss_G', 'loss_D']
     train_csv_paths = []

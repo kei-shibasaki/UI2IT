@@ -8,7 +8,7 @@
     "cache_images": true,
     "enable_line_nortify": true,
 
-    "name": "MSPC_horse2zebra_b04_lsgan_idt",
+    "name": "MSPC_horse2zebra_b04_lsgan_idt_clip05",
     "input_resolution": [256, 256],
     "network_module_G": "models.resnet",
     "model_type_G": "ResnetGenerator",
@@ -37,8 +37,8 @@
 
     "batch_size": 4,
     "steps": 220000,
-    "use_grad_clip": false,
-    "grad_clip_val": 0.1,
+    "use_grad_clip": true,
+    "grad_clip_val": 0.5,
     "coef_adv": 1,
     "coef_mspc": 1,
     "coef_constraint": 0.5,
