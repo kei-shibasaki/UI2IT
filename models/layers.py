@@ -39,7 +39,6 @@ class LayerNorm2d(nn.Module):
     def forward(self, x):
         return LayerNormFunction.apply(x, self.weight, self.bias, self.eps)
 
-
 class ConvBlock(nn.Module):
     def __init__(self, dim):
         super().__init__()
@@ -61,7 +60,27 @@ class ConvBlock(nn.Module):
         x = self.conv_block2(x) + x 
         return x
 
-
+class ConvNormReLU(nn.Module):
+    def __init__(self, dim, kernel_size=3, norm_type='ln', residual=False):
+        super().__init__()
+        assert norm_type in ['ln', 'bn', 'in']
+        self.residual = residual
+        self.conv = nn.Conv2d(dim, dim, kernel_size=kernel_size, padding=kernel_size//2)
+        if norm_type=='ln':
+            self.norm = LayerNorm2d(dim)
+        elif norm_type=='bn':
+            self.norm = nn.BatchNorm2d(dim)
+        else:
+            self.norm = nn.InstanceNorm2d(dim)
+        self.relu = nn.ReLU(inplace=True)
+    
+    def forward(self, x):
+        if self.residual: a = x
+        x = self.conv(x)
+        x = self.norm(x)
+        x = self.relu(x)
+        if self.residual: x = a + x
+        return x
 
 class LaplacianPyramid(nn.Module):
     def __init__(self, num_high=3):
@@ -121,40 +140,5 @@ class LaplacianPyramid(nn.Module):
                 up = nn.functional.interpolate(up, size=(level.shape[2], level.shape[3]))
             image = up + level
         return image
-    
-"""
-class ConvBlock(nn.Module):
-    def __init__(self, dim):
-        super().__init__()
-        self.norm = LayerNorm2d(dim)
-        self.conv1 = nn.Conv2d(dim, 2*dim, kernel_size=1, bias=True)
-        self.conv2 = nn.Conv2d(2*dim, 2*dim, kernel_size=3, padding=1, groups=2*dim)
-        self.gelu = nn.GELU()
-        self.conv3 = nn.Conv2d(2*dim, dim, kernel_size=1, bias=True)
-    
-    def forward(self, x):
-        a = x
-        x = self.norm(x)
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.gelu(x)
-        x = self.conv3(x)
-        return a + x
 
-class MLPBlock(nn.Module):
-    def __init__(self, dim):
-        super().__init__()
-        # self.alpha = nn.Parameter(torch.zeros((1, dim, 1, 1)), requires_grad=True)
-        self.norm = LayerNorm2d(dim)
-        self.conv1 = nn.Conv2d(dim, 2*dim, kernel_size=1, bias=True)
-        self.ptf = nn.GELU()
-        self.conv2 = nn.Conv2d(2*dim, dim, kernel_size=1, bias=True)
-    
-    def forward(self, x):
-        a = x
-        x = self.norm(x)
-        x = self.conv1(x)
-        x = self.ptf(x)
-        x = self.conv2(x)
-        return a + x
-"""
+

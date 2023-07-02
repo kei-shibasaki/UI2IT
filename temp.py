@@ -264,5 +264,130 @@ def test_compare_img():
         compare = arrange_images(images)
         compare.save(f'temp2/{i:03}.jpg')
 
+def test_thres():
+    out_dir  = os.path.join('temp', 'comp_thres')
+    os.makedirs(out_dir, exist_ok=True)
+
+    images_dirs = [
+        'datasets/selfie2anime/testA',
+        'datasets/selfie2anime/testA_map/0',
+    ]
+
+    images_list = []
+    for i, images_dir in enumerate(images_dirs):
+        if i==0:
+            images_list.append(sorted(glob.glob(os.path.join(images_dir, '*.jpg'))))
+        else:
+            images_list.append(sorted(glob.glob(os.path.join(images_dir, '*.png'))))
+
+    n_images = len(images_list[0])
+    n_row = len(images_list)
+
+    for i in tqdm(range(n_images)):
+        A = cv2.imread(images_list[0][i])
+        M = cv2.imread(images_list[1][i])
+        M = cv2.cvtColor(M, cv2.COLOR_BGR2GRAY)
+        M_ths = []
+        for th in [1, 5, 10, 15, 20, 25, 50, 100, 150, 200]:
+            _, M_th = cv2.threshold(M, th, 255, cv2.THRESH_BINARY)
+            M_ths.append(M_th)
+        M = cv2.cvtColor(M, cv2.COLOR_GRAY2BGR)
+        M_ths = [cv2.cvtColor(M_th, cv2.COLOR_GRAY2BGR) for M_th in M_ths]
+        img = np.hstack([A,M,*M_ths])
+        #print(img.shape)
+        cv2.imwrite(os.path.join(out_dir, f'{i:03}.jpg'), img)
+
+def check_params():
+    from models.network import GeneratorSeparate, GeneratorSeparate2
+    from models.resnet2 import ResnetGenerator
+    import thop 
+
+    from scripts.utils import load_option
+
+    #opt = EasyDict(load_option('config/config_ours_anime3.json'))
+    opt = EasyDict(load_option('config/config_ours.json'))
+
+    b,c,h,w = 1,3,256,256
+
+    #net = ResnetGenerator(4, 7, 64, n_blocks=9).to(device)
+    net = GeneratorSeparate2(opt.netG).to(device)
+
+    x = torch.rand((b,3,h,w)).to(device)
+    mask = torch.rand((b,1,h,w)).to(device)
+
+    fore, back, output = net(x, mask)
+    print(fore.shape, back.shape, output.shape)
+
+    macs, params = thop.profile(net, inputs=[x, mask])
+    print(f'GMACs: {macs/1e9:.3f}, Params: {params/1e6:.3f} M')
+
+def check_params_u2net():
+    from models.u2net import U2NETP
+    import thop 
+
+    from scripts.utils import load_option
+
+    b,c,h,w = 1,3,256,256
+
+    #net = ResnetGenerator(4, 7, 64, n_blocks=9).to(device)
+    net = U2NETP(in_ch=3, out_ch=1).to(device)
+
+    x = torch.rand((b,3,h,w)).to(device)
+
+    out, _, _, _, _, _, _ = net(x)
+
+    macs, params = thop.profile(net, inputs=[x])
+    print(f'GMACs: {macs/1e9:.3f}, Params: {params/1e6:.3f} M')
+
+def count_epoch():
+    ext = 'jpg'
+    dataset_name = 'selfie2anime'
+    total_epoch = 200
+
+    trainA_dir = f'datasets/{dataset_name}/trainA'
+    trainB_dir = f'datasets/{dataset_name}/trainB'
+
+    imagesA = glob.glob(os.path.join(trainA_dir, f'*.{ext}'))
+    imagesB = glob.glob(os.path.join(trainB_dir, f'*.{ext}'))
+
+    #step_per_epoch = min(len(imagesA), len(imagesB))
+    step_per_epoch = max(len(imagesA), len(imagesB))
+    print(f'Epoch: 1, Step: {step_per_epoch}')
+    print(f'Epoch: {total_epoch}, Step: {step_per_epoch*total_epoch}')
+    print(f'Epoch: {total_epoch}, Step: {step_per_epoch*total_epoch//4}')
+
+def to_binary():
+    out_dir = 'datasets/selfie2anime/trainB_map_bi'
+    os.makedirs(out_dir, exist_ok=True)
+    images = sorted(glob.glob('datasets/selfie2anime/trainB_map/*.png'))
+    for img_path in tqdm(images):
+        fname = os.path.basename(img_path)
+        img = cv2.imread(img_path)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        ret, thresh = cv2.threshold(img, 50, 255, cv2.THRESH_BINARY)
+        cv2.imwrite(os.path.join(out_dir, fname), thresh)
+
+def check_binary():
+    out_dir = 'temp/comp_thresh'
+    os.makedirs(out_dir, exist_ok=True)
+    images1 = sorted(glob.glob('datasets/selfie2anime/testA/*.jpg'))
+    images2 = sorted(glob.glob('datasets/selfie2anime/testA_map/*.png'))
+    for img_path1, img_path2 in zip(tqdm(images1), images2):
+        fname = os.path.basename(img_path1)
+        img_input = cv2.imread(img_path1)
+        img = cv2.imread(img_path2)
+        imgs = [img_input, img]
+        for min_val in [1, 5, 10, 20, 30, 40, 50, 100, 200]:
+            ret, thresh = cv2.threshold(img, min_val, 255, cv2.THRESH_BINARY)
+            #thresh = cv2.cvtColor(thresh, cv2.COLOR_GRAY2BGR)
+            thresh = img_input * (thresh/255.0)
+            imgs.append(thresh)
+
+        img = np.hstack(imgs)
+        cv2.imwrite(os.path.join(out_dir, fname), img)
+
+
+
+
 if __name__=='__main__':
-    test_compare_img()
+    to_binary()

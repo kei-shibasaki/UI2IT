@@ -7,6 +7,7 @@ import shutil
 import time
 import itertools
 
+import numpy as np 
 import torch
 import torch.utils
 from torch import nn 
@@ -14,10 +15,10 @@ from torch.nn import functional as F
 from easydict import EasyDict
 from PIL import Image
 
-from datasets.dataset import UnpairedImageDataset, SimgleImageDataset
+from datasets.dataset import UnpairedImageDatasetWithMask, SingleImageDatasetWithMask
 from scripts.losses import GANLoss
 from scripts.utils import load_option, pad_tensor, send_line_notify, tensor2ndarray, arrange_images
-from scripts.training_utils import set_requires_grad, ImagePool
+from scripts.training_utils import set_requires_grad
 from scripts.cal_fid import get_fid
 from scripts.scheduler import LinearLRWarmup
 
@@ -56,16 +57,13 @@ def train(opt_path):
     
     loss_fn = GANLoss(gan_mode='lsgan').to(device)
     network_module_G = importlib.import_module(opt.network_module_G)
-    netG = getattr(network_module_G, opt.model_type_G)(**opt.netG).to(device)
+    netG = getattr(network_module_G, opt.model_type_G)(opt.netG).to(device)
     network_module_G_BA = importlib.import_module(opt.network_module_G_BA)
-    netG_BA = getattr(network_module_G_BA, opt.model_type_G_BA)(**opt.netG_BA).to(device)
+    netG_BA = getattr(network_module_G_BA, opt.model_type_G_BA)(opt.netG_BA).to(device)
     network_module_D = importlib.import_module(opt.network_module_D)
     netD = getattr(network_module_D, opt.model_type_D)(opt.netD).to(device)
     network_module_D_BA = importlib.import_module(opt.network_module_D_BA)
     netD_BA = getattr(network_module_D_BA, opt.model_type_D_BA)(opt.netD_BA).to(device)
-
-    GA_pool = ImagePool(opt.pool_size)
-    GB_pool = ImagePool(opt.pool_size)
 
     optimG = torch.optim.Adam(itertools.chain(netG.parameters(), netG_BA.parameters()), lr=opt.learning_rate, betas=opt.betas)
     schedulerG = LinearLRWarmup(optimG, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
@@ -73,8 +71,9 @@ def train(opt_path):
     schedulerD = LinearLRWarmup(optimD, opt.lr_w, opt.lr_max, opt.lr_min, opt.step_w, opt.step_max)
 
     train_dataset = UnpairedImageDataset(opt.trainA_path, opt.trainB_path, opt.input_resolution, opt.data_extention, opt.cache_images)
+    train_dataset = UnpairedImageDatasetWithMask(opt.trainA_path, opt.trainA_mask_path, opt.trainB_path, opt.trainB_mask_path, opt.input_resolution, opt.data_extention, opt.mask_extention, opt.cache_images)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=2)
-    val_dataset = SimgleImageDataset(opt.testA_path, opt.input_resolution, opt.data_extention, opt.cache_images)
+    val_dataset = SingleImageDatasetWithMask(opt.testA_path, opt.testA_mask_path, opt.input_resolution, opt.data_extention, opt.mask_extention, opt.cache_images)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=2)
 
     print('Start Training')
@@ -88,10 +87,12 @@ def train(opt_path):
             # [(B,C,H,W)]*F -> (B,F,C,H,W)
             A = data['A'].to(device)
             B = data['B'].to(device)
-            GA = netG(A)
-            GB = netG_BA(B)
-            A_rec = netG_BA(GA)
-            B_rec = netG(GB)
+            M_A = data['mask_A'].to(device)
+            M_B = data['mask_B'].to(device)
+            GA_f, GA_b, GA = netG(A, M_A)
+            GB_f, GB_b, GB = netG_BA(B, M_B)
+            A_rec_f, A_rec_b, A_rec = netG_BA(GA)
+            B_rec_f, B_rec_b, B_rec = netG(GB)
             A_idt = netG_BA(A)
             B_idt = netG(B)
 

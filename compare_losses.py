@@ -20,7 +20,7 @@ def plt_losses_train(log_names, csv_paths, columns_to_plot, out_path):
 
     plt.grid()
     plt.legend()
-    plt.ylim(-2, 2)
+    plt.ylim(-2, 10)
     plt.xlabel('Step')
     plt.ylabel(f'{", ".join(columns_to_plot)}')
     plt.title(f'Value')
@@ -49,20 +49,30 @@ def plt_losses_val(log_names, csv_paths, columns_to_plot, out_path):
 
 
 if __name__=='__main__':
-    #whole_log_name, log_names = 'MSPC_h2z_b04', ['MSPC_horse2zebra_b04', 'MSPC_horse2zebra_b04_lsgan_idt']
-    #whole_log_name, log_names = 'MSPC_h2z_one', ['MSPC_horse2zebra_b01_lsgan_idt', 'MSPC_one_horse2zebra_b01_lsgan_idt']
-    #whole_log_name, log_names = 'MSPC_h2z_bsize', ['MSPC_horse2zebra_b01_lsgan_idt', 'MSPC_horse2zebra_b04_lsgan_idt']
-    whole_log_name, log_names = 'MSPC_h2z_one', ['MSPC_horse2zebra_b01_lsgan_idt', 'MSPC_one_horse2zebra_b01_lsgan_idt']
-    whole_log_name, log_names = 'mycomp', ['MSPC_horse2zebra_b04', 'MSPC_one_horse2zebra_b01_lsgan_idt', 'TEST2']
-    whole_log_name, log_names = 'mspc_anime', ['MSPC_paper_anime', 'mspc_sal_mistm_anime']
+    whole_log_name, log_names = 'sep', ['TEST_ours_anime_sal2_lr', 'TEST_ours_anime_sal2_lr_sep', 'TEST_ours_anime_saladv_lr_recons', 'TEST_ours_anime_saladv_lr_sep_recons']
 
-    columns_to_plot = ['loss_G', 'loss_D']
-    train_csv_paths = []
-    for log_name in log_names:
-        log_path = f'experiments/{log_name}/logs'
-        train_csv_paths.append(os.path.join(log_path, f'train_losses_{log_name}.csv'))
-    out_path = os.path.join('comp', f'train_losses_{whole_log_name}.png')
-    plt_losses_train(log_names, train_csv_paths, columns_to_plot, out_path)
+    #whole_log_name, log_names = 'clip', ['TEST_ours_anime_saladv_lr_sep_recons', 'TEST_ours_anime_saladv_lr_sep_recons_resume', 'TEST_ours_anime_saladv_lr_sep_recons_clip', 'TEST_ours_anime_saladv_lr_sep_recons_mod', 'TEST_ours_anime_saladv_lr_sep_recons_clip_mod', 'TEST_ours_anime_saladv_lr_sep_recons_clip_idt_mod']
+    #whole_log_name, log_names = 'adv', ['TEST_ours_anime_sal2_lr', 'TEST_ours_anime_saladv_lr_recons', 'TEST_ours_anime_saladv_lr_sep_recons']
+    whole_log_name, log_names = 'idt', ['TEST_ours_anime_saladv_lr_sep_recons_clip_mod', 'TEST_ours_anime_saladv_lr_sep_recons_clip_idt_mod', 'TEST_ours_anime_saladv_lr_sep_recons_idt_mod', 'TEST_ours_anime_saladv_lr_sep_recons_idt_mod_b4', 'TEST_ours_anime_saladv_lr_sep_recons_idt_mod_larger']
+    #whole_log_name, log_names = 'mspc', ['MSPC_horse2zebra_b04_lr', 'MSPC_horse2zebra_b04_lr2', 'MSPC_horse2zebra_b04_lsgan']
+    whole_log_name, log_names = 'h2z_ours', ['ours_horse2zebra_lr_sep_recons_idt', 'ours_horse2zebra_saladv_lr_sep_recons_idt', 'ours_horse2zebra_lr_sep_recons_idt10', 'ours_horse2zebra_lr_sep_recons10_idt', 'ours_horse2zebra_lr_sep_recons10_idt10', 'ours_horse2zebra_lr_sep_idt_foreonly', 'ours_horse2zebra_lr_sep_idt_foreonly2']
+    whole_log_name, log_names = 'c2d_ours', ['ours_cat2dog_lr_sep_recons_idt', 'ours_cat2dog_saladv_lr_sep_recons_idt']
+    whole_log_name, log_names = 'a2o_ours', ['ours_apple2orange_lr_sep_recons_idt', 'ours_apple2orange_saladv_lr_sep_recons_idt']
+    whole_log_name, log_names = 's2a_ours', ['TEST_ours_anime_saladv_lr_sep_recons_idt_mod', 'ours_selfie2anime_lr_sep_recons_idt_resume', 'TEST_ours_anime_saladv_lr_sep_recons_idt_mod_b4']
+    whole_log_name, log_names = 's2a_ours', ['TEST_ours_anime_saladv_lr_sep_recons_idt_mod', 'ours_selfie2anime_p3m10k', 'ours_selfie2anime_p3m10k_saladv', 'ours_selfie2anime_p3m10k_foreonly', 'ours_selfie2anime_p3m10k_foreonly_binary']
+    whole_log_name, log_names = 'h2z_ours_foreonly', ['ours_horse2zebra_lr_sep_idt_foreonly2', 'ours_horse2zebra_lr_sep_idt_foreonly3', 'ours_horse2zebra_lr_sep_idt_foreonly4', 'ours_horse2zebra_lr_sep_idt_foreonly_multires']
+    whole_log_name, log_names = 'a2o_ours_foreonly', ['ours_apple2orange_lr_sep_idt_foreonly', 'ours_apple2orange_lr_sep_idt_foreonly2']
+
+    test_only = False 
+
+    if not test_only:
+        columns_to_plot = ['loss_G', 'loss_D']
+        train_csv_paths = []
+        for log_name in log_names:
+            log_path = f'experiments/{log_name}/logs'
+            train_csv_paths.append(os.path.join(log_path, f'train_losses_{log_name}.csv'))
+        out_path = os.path.join('comp', f'train_losses_{whole_log_name}.png')
+        plt_losses_train(log_names, train_csv_paths, columns_to_plot, out_path)
 
     columns_to_plot = ['fid_score']
     val_csv_paths = []

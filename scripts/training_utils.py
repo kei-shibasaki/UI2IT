@@ -54,7 +54,16 @@ class ImagePool():
                     return_images.append(image)
         return_images = torch.cat(return_images, 0)   # collect all the images and return
         return return_images
-    
+
+class ImagePoolMulti():
+    def __init__(self, pool_size, labels):
+        self.pool_size = pool_size
+        self.pool_modules = {}
+        for label in labels:
+            self.pool_modules[label] = ImagePool(pool_size)
+    def query(self, images, label):
+        return self.pool_modules[label].query(images)
+
 def set_requires_grad(nets, requires_grad=False):
     """Set requies_grad=Fasle for all the networks to avoid unnecessary computations
     Parameters:

@@ -108,17 +108,13 @@ class ResnetGenerator(nn.Module):
                       norm_layer(int(ngf * mult / 2)),
                       nn.ReLU(True)]
         model += [nn.ReflectionPad2d(3)]
-        model += [nn.Conv2d(ngf, 1+output_nc+output_nc, kernel_size=7, padding=0)]
-        # model += [nn.Sigmoid()]
+        model += [nn.Conv2d(ngf, output_nc, kernel_size=7, padding=0)]
+        model += [nn.Sigmoid()]
 
         self.model = nn.Sequential(*model)
         
         self.apply(self.init_weights)
     
-    def inverse_sigmoid(self, x):
-        x = torch.clamp(x, min=0.1, max=0.9)
-        return torch.log(x/(1-x))
-
     def init_weights(self, module):
         if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
             module.weight.data.normal_(mean=0, std=0.02)
@@ -127,10 +123,7 @@ class ResnetGenerator(nn.Module):
 
     def forward(self, x, mask):
         """Standard forward"""
-        feature = self.model(torch.cat([x, mask], dim=1))
-        #out_mask = torch.sigmoid(feature[:,0,:,:].unsqueeze(0) + self.inverse_sigmoid(mask))
-        out_mask = mask
-        foreground = torch.sigmoid(feature[:,1:4,:,:])
-        background = torch.sigmoid(feature[:,4:7,:,:])
-        output = out_mask*foreground + (1-out_mask)*background
-        return out_mask, foreground, background, output
+        inp = x
+        foreground = self.model(torch.cat([x, mask], dim=1))
+        output = mask*foreground + (1-mask)*inp
+        return foreground, inp, output

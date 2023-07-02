@@ -15,7 +15,7 @@ from easydict import EasyDict
 from PIL import Image
 
 from models.mspc import PerturbationNetwork, grid_sample
-from datasets.dataset import UnpairedImageDataset, SimgleImageDataset
+from datasets.dataset import UnpairedImageDataset, SingleImageDataset
 from scripts.losses import GANLoss
 from scripts.utils import load_option, pad_tensor, send_line_notify, tensor2ndarray, arrange_images
 from scripts.training_utils import set_requires_grad
@@ -85,7 +85,7 @@ def train(opt_path):
 
     train_dataset = UnpairedImageDataset(opt.trainA_path, opt.trainB_path, opt.input_resolution, opt.data_extention, opt.cache_images)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=2)
-    val_dataset = SimgleImageDataset(opt.testA_path, opt.input_resolution, opt.data_extention, opt.cache_images)
+    val_dataset = SingleImageDataset(opt.testA_path, opt.input_resolution, opt.data_extention, opt.cache_images)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=2)
 
     print('Start Training')

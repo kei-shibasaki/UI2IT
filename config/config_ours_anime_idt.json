@@ -3,20 +3,26 @@
     "trainB_path": "datasets/selfie2anime/trainB",
     "testA_path": "datasets/selfie2anime/testA",
     "testB_path": "datasets/selfie2anime/testB",
+    "trainA_mask_path": "datasets/selfie2anime/trainA_map",
+    "testA_mask_path": "datasets/selfie2anime/testA_map",
+    "trainB_mask_path": "datasets/selfie2anime/trainB_map",
+    "testB_mask_path": "datasets/selfie2anime/testB_map",
     "data_extention": "jpg",
+    "mask_extention": "png",
     "save_extention": "jpg",
     "cache_images": true,
     "enable_line_nortify": true,
 
-    "name": "MSPC_anime_mod",
+    "name": "TEST_ours_anime_saladv_lr_sep_recons_clip_mod",
     "input_resolution": [256, 256],
-    "network_module_G": "models.resnet",
-    "model_type_G": "ResnetGenerator",
+    "network_module_G": "models.network",
+    "model_type_G": "GeneratorSeparate",
     "netG": {
-        "input_nc": 3,
-        "output_nc": 3, 
-        "ngf": 64, 
-        "n_blocks": 9
+        "in_channels": 4,
+        "width": 32,
+        "enc_blk_nums": [1,1,1], 
+        "middle_blk_num": 3,
+        "dec_blk_nums": [1,1,1]
     },
 
     "network_module_D": "models.discriminator",
@@ -24,6 +30,14 @@
     "netD": {
         "input_nc": 3,
         "ndf": 64,
+        "n_layers": 3
+    },
+
+    "network_module_D_mask": "models.discriminator",
+    "model_type_D_mask": "NLayerDiscriminator",
+    "netD_mask": {
+        "input_nc": 1,
+        "ndf": 32,
         "n_layers": 3
     },
 
@@ -37,26 +51,31 @@
 
     "batch_size": 1,
     "steps": 700000,
-    "use_grad_clip": false,
+    "use_grad_clip": true,
     "grad_clip_val": 0.1,
+    "pool_size": 50,
     "coef_adv": 1,
     "coef_mspc": 1,
     "coef_constraint": 0.5,
     "coef_idt": 1,
+    "coef_recons": 1,
+    "coef_mask_recons": 1,
+    "coef_adv_mask": 1,
     
     "lr_w": 5e-5, 
     "lr_max": 2e-4, 
-    "lr_min": 1e-6, 
-    "step_0": 100000, 
-    "step_1": 500000, 
-    "step_2": 700000,
+    "lr_min": 0, 
+    "step_w": 100000,
+    "step_down": 300000, 
+    "step_max": 700000,
     "learning_rate": 2e-4,
     "betas": [0.5, 0.999], 
     "save_compare": true,
 
     "print_freq": 100,
-    "eval_freq": 5000,
+    "eval_freq": 10000,
     "save_freq": 50000,
+    "nortify_freq": 100000,
     "pretrained_path": null,
     "resume_step": 0,
     "create_new_log": true
