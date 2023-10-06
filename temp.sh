@@ -66,11 +66,71 @@ CUDA_VISIBLE_DEVICES=6 python -m train_codes.train_ours_adv_idt -c config/config
 
 CUDA_VISIBLE_DEVICES=6 python -m train_codes.train_ours_idt -c config/config_ours_anime2.json
 CUDA_VISIBLE_DEVICES=7 python -m train_codes.train_ours_adv_idt -c config/config_ours_anime.json
-CUDA_VISIBLE_DEVICES=1 python -m train_codes.train_ours_idt_foreonly -c config/config_ours_anime3.json
+CUDA_VISIBLE_DEVICES=1 python -m train_codes.train_ours_idt_foreonly -c config/config_ours_apple2orange.json
 CUDA_VISIBLE_DEVICES=3 python -m train_codes.train_ours_idt_foreonly_resnet -c config/config_ours4.json
 
 CUDA_VISIBLE_DEVICES=7 python -m train_codes.train_ours_idt_foreonly3 -c config/config_ours3.json
+CUDA_VISIBLE_DEVICES=7 python -m train_codes.train_ours_idt_foreonly -c config/config_ours_apple2orange.json
 
+
+CUDA_VISIBLE_DEVICES=7 python -m train_codes.train_ours_idt_foreonly -c config/config_ours_anime_idt.json
+CUDA_VISIBLE_DEVICES=6 python -m train_codes.train_ours_idt_foreonly_adv -c config/config_ours_anime_adv.json
+CUDA_VISIBLE_DEVICES=2 python -m train_codes.train_ours_idt_foreonly_adv_mask -c config/config_ours_anime_mask.json
+CUDA_VISIBLE_DEVICES=3 python -m train_codes.train_ours_idt_foreonly_adv_mask_recons -c config/config_ours_anime_mask_recons.json
+CUDA_VISIBLE_DEVICES=7 python -m train_codes.train_ours_idt_foreonly_adv_mask_recons_all -c config/config_ours_anime_mask_recons_all.json
+CUDA_VISIBLE_DEVICES=3 python -m train_codes.train_ours_idt_foreonly_all -c config/config_ours_anime_foreonly_all.json
+
+CUDA_VISIBLE_DEVICES=6 python -m train_codes.train_ours_idt_foreonly -c config/config_edges2shoes.json
+CUDA_VISIBLE_DEVICES=3 python -m train_codes.train_ours_idt_foreonly -c config/config_edges2handbags.json
+
+CUDA_VISIBLE_DEVICES=2 python -m train_codes.train_mspc_paper -c config/config_mspc_edges2handbags.json
+CUDA_VISIBLE_DEVICES=3 python -m train_codes.train_mspc_paper -c config/config_mspc_edges2shoes.json
+CUDA_VISIBLE_DEVICES=6 python -m train_codes.train_ours_idt_foreonly -c config/config_edges2handbags.json
+CUDA_VISIBLE_DEVICES=2 python -m train_codes.train_ours_idt_foreonly -c config/config_edges2shoes.json
+
+
+CUDA_VISIBLE_DEVICES=3 python -m train_codes.train_ours_idt_foreonly -c config/config_edges2handbags.json
+CUDA_VISIBLE_DEVICES=7 python -m train_codes.train_ours_idt_foreonly -c config/config_edges2shoes.json
+
+CUDA_VISIBLE_DEVICES=7 python -m train_codes.train_ours_idt_foreonly -c config/config_edges2handbags_b4.json
+CUDA_VISIBLE_DEVICES=2 python -m train_codes.train_ours_idt_foreonly -c config/config_edges2shoes_b4.json
+
+CUDA_VISIBLE_DEVICES=7 python -m train_codes.train_ours_idt_foreonly -c config/config_edges2shoes.json
+CUDA_VISIBLE_DEVICES=3 python -m train_codes.train_ours_idt_foreonly -c config/config_edges2shoes.json
+CUDA_VISIBLE_DEVICES=2 python -m train_codes.train_ours_idt_foreonly -c config/config_edges2shoes.json
+CUDA_VISIBLE_DEVICES=3 python -m train_codes.train_ours_idt_foreonly -c config/config_edges2shoes.json
+
+CUDA_VISIBLE_DEVICES=7 python -m train_codes.train_ours_idt_foreonly_adv_mask_allonly -c config/config_ours_anime.json
+CUDA_VISIBLE_DEVICES=6 python -m train_codes.train_ours_idt_foreonly_adv_mask_recons_allonly -c config/config_ours_anime2.json
+
+CUDA_VISIBLE_DEVICES=2 python -m train_codes.train_ours_idt_foreonly_adv_mask_allonly -c config/config_ours_anime.json
+CUDA_VISIBLE_DEVICES=2 python -m train_codes.train_ours_idt_foreonly_adv_mask_recons_allonly -c config/config_ours_anime3.json
+CUDA_VISIBLE_DEVICES=2 python -m train_codes.train_ours_idt_foreonly_adv_mask_recons_allonly -c config/config_ours_anime3.json
+
+CUDA_VISIBLE_DEVICES=1 python -m train_codes.train_ours_idt_foreonly_adv_mask_allonly_nomask -c config/config_ours_anime4.json
+
+
+
+CUDA_VISIBLE_DEVICES=2 python -m train_codes.train_ours_idt_foreonly_adv_mask_recons_all -c config/config_ours_anime_mask_recons_all.json
+CUDA_VISIBLE_DEVICES=7 python -m train_codes.train_ours_idt_foreonly_adv_mask_recons_all -c config/config_ours_anime_mask_recons_all.json
+
+CUDA_VISIBLE_DEVICES=2 python -m train_codes.train_ours_idt_foreonly -c config/config_edges2handbags_hontou.json
+CUDA_VISIBLE_DEVICES=3 python -m train_codes.train_ours_idt_foreonly -c config/config_edges2handbags_hontou.json
+
+CUDA_VISIBLE_DEVICES=2 python -m train_codes.train_ours_idt_foreonly -c config/config_edges2shoes_hontou.json
+CUDA_VISIBLE_DEVICES=3 python -m train_codes.train_ours_idt_foreonly -c config/config_edges2shoes_hontou.json
+
+CUDA_VISIBLE_DEVICES=0 python -m train_codes.train_mspc_paper -c config/config_mspc_edges2handbags.json
+CUDA_VISIBLE_DEVICES=1 python -m train_codes.train_mspc_paper -c config/config_mspc_front.json
+
+CUDA_VISIBLE_DEVICES=7 python -m train_codes.train_ours_idt_foreonly_adv_mask_recons_all -c config/config_ours_anime_mask_recons_all.json
+
+CUDA_VISIBLE_DEVICES=1 python -m train_codes.train_ours_idt_foreonly_adv_mask_recons_all -c config/config_ours_front.json
+
+CUDA_VISIBLE_DEVICES=1 python -m train_codes.train_mspc_paper -c config/config_mspc_front.json
+CUDA_VISIBLE_DEVICES=3 python -m train_codes.train_mspc_lsgan -c config/config_mspc_front.json
+
+CUDA_VISIBLE_DEVICES=2 python -m train_codes.train_ours_idt_foreonly_adv_mask_recons_all_multires -c config/config_ours_anime_mask_recons_all_multires.json
 
 CUDA_VISIBLE_DEVICES=3 python temp.py 
 

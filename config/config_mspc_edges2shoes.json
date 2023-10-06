@@ -1,0 +1,62 @@
+{
+    "trainA_path": "datasets/edges2shoes/trainA",
+    "trainB_path": "datasets/edges2shoes/trainB",
+    "testA_path": "datasets/edges2shoes/testA",
+    "testB_path": "datasets/edges2shoes/testB",
+    "data_extention": "jpg",
+    "save_extention": "jpg",
+    "cache_images": false,
+    "enable_line_nortify": true,
+
+    "name": "MSPC_edges2shoes_b04_hontou",
+    "input_resolution": [256, 256],
+    "network_module_G": "models.resnet",
+    "model_type_G": "ResnetGenerator",
+    "netG": {
+        "input_nc": 3,
+        "output_nc": 3, 
+        "ngf": 64, 
+        "n_blocks": 9
+    },
+
+    "network_module_D": "models.discriminator",
+    "model_type_D": "NLayerDiscriminator",
+    "netD": {
+        "input_nc": 3,
+        "ndf": 64,
+        "n_layers": 3
+    },
+
+    "netP": {
+        "grid_size": 2,
+        "crop_size": 256, 
+        "r1": 0.9, 
+        "r2": 0.9,
+        "pert_threshold": 2.0
+    },
+
+    "batch_size": 4,
+    "steps": 62281,
+    "use_grad_clip": false,
+    "grad_clip_val": 0.5,
+    "coef_adv": 1,
+    "coef_mspc": 1,
+    "coef_constraint": 0.5,
+    
+    "lr_w": 1e-4, 
+    "lr_max": 2e-4, 
+    "lr_min": 2e-4, 
+    "step_w": 31140, 
+    "step_max": 62281,
+    "learning_rate": 2e-4,
+    "betas": [0.5, 0.999], 
+    "save_compare": true,
+
+    "print_freq": 100,
+    "eval_freq": 2000,
+    "save_freq": 5000,
+    "nortify_freq": 10000,
+    "pretrained_path": null,
+    "resume_step": 0,
+    "create_new_log": true
+}

@@ -13,13 +13,12 @@
     "cache_images": true,
     "enable_line_nortify": true,
 
-    "name": "ours_selfie2anime_foreonly",
+    "name": "ours_selfie2anime_foreonly_adv",
     "input_resolution": [256, 256],
     "network_module_G": "models.network",
-    "model_type_G": "GeneratorSeparate3",
+    "model_type_G": "GeneratorSeparate",
     "netG": {
         "in_channels": 4,
-        "out_channels": 3,
         "width": 32,
         "enc_blk_nums": [1,1,1], 
         "middle_blk_num": 3,

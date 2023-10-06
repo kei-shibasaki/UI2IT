@@ -20,7 +20,7 @@ def plt_losses_train(log_names, csv_paths, columns_to_plot, out_path):
 
     plt.grid()
     plt.legend()
-    plt.ylim(-2, 10)
+    plt.ylim(-5, 10)
     plt.xlabel('Step')
     plt.ylabel(f'{", ".join(columns_to_plot)}')
     plt.title(f'Value')
@@ -41,7 +41,8 @@ def plt_losses_val(log_names, csv_paths, columns_to_plot, out_path):
             plt.scatter(min_step, min_val, s=10, color='r')
 
     plt.grid()
-    plt.legend()
+    plt.legend(fontsize=6)
+    #plt.ylim(50, 150)
     plt.xlabel('Step')
     plt.ylabel(f'{", ".join(columns_to_plot)}')
     plt.title(f'{", ".join(min_vals)}')
@@ -61,9 +62,16 @@ if __name__=='__main__':
     whole_log_name, log_names = 's2a_ours', ['TEST_ours_anime_saladv_lr_sep_recons_idt_mod', 'ours_selfie2anime_lr_sep_recons_idt_resume', 'TEST_ours_anime_saladv_lr_sep_recons_idt_mod_b4']
     whole_log_name, log_names = 's2a_ours', ['TEST_ours_anime_saladv_lr_sep_recons_idt_mod', 'ours_selfie2anime_p3m10k', 'ours_selfie2anime_p3m10k_saladv', 'ours_selfie2anime_p3m10k_foreonly', 'ours_selfie2anime_p3m10k_foreonly_binary']
     whole_log_name, log_names = 'h2z_ours_foreonly', ['ours_horse2zebra_lr_sep_idt_foreonly2', 'ours_horse2zebra_lr_sep_idt_foreonly3', 'ours_horse2zebra_lr_sep_idt_foreonly4', 'ours_horse2zebra_lr_sep_idt_foreonly_multires']
-    whole_log_name, log_names = 'a2o_ours_foreonly', ['ours_apple2orange_lr_sep_idt_foreonly', 'ours_apple2orange_lr_sep_idt_foreonly2']
+    whole_log_name, log_names = 'a2o_ours_foreonly', ['TEST_ours_anime_saladv_lr_sep_recons_idt_mod', 'ours_selfie2anime_foreonly', 'ours_selfie2anime_foreonly_adv', 'ours_selfie2anime_foreonly_adv_mask', 'ours_selfie2anime_foreonly_adv_mask_recons', 'ours_selfie2anime_foreonly_adv_mask_recons_all', 'ours_selfie2anime_foreonly_all', 'ours_selfie2anime_foreonly_adv_mask_recons_all2', 'ours_selfie2anime_foreonly_adv_mask_recons_all3']
+    whole_log_name, log_names = 'a2o_ours_foreonly', ['TEST_ours_anime_saladv_lr_sep_recons_idt_mod', 'ours_selfie2anime_foreonly', 'ours_selfie2anime_foreonly_adv_mask', 'ours_selfie2anime_foreonly_adv_mask_recons', 'ours_selfie2anime_foreonly_adv_mask_recons_all', 'ours_selfie2anime_foreonly_adv_mask_recons_all2', 'ours_selfie2anime_foreonly_adv_mask_recons_all3']
+    whole_log_name, log_names = 'edges2shoes', ['MSPC_edges2shoes_b04_2', 'ours_edges2shoes_bi', 'ours_edges2shoes_oneside_idt10', 'ours_edges2shoes_oneside2', 'ours_edges2shoes_oneside3',  'ours_edges2shoes_oneside_b4']
+    whole_log_name, log_names = 'edges2handbags', ['MSPC_edges2handbags_b04', 'ours_edges2handbags_bi', 'ours_edges2handbags_bi2', 'ours_edges2handbags_oneside_idt10', 'ours_edges2handbags_oneside2', 'ours_edges2handbags_oneside3', 'ours_edges2handbags_oneside_b4', 'ours_edges2handbags_oneside_b4_2']
+    whole_log_name, log_names = 'edges2shoes', ['ours_edges2shoes_oneside2', 'ours_edges2shoes_oneside3', 'ours_edges2shoes_oneside4', 'ours_edges2shoes_oneside5', 'ours_edges2shoes_oneside6', 'ours_edges2shoes_oneside7']
+    whole_log_name, log_names = 'a2o_ours_foreonly', ['ours_selfie2anime_idt_foreonly_adv_mask_recons_allonly', 'ours_selfie2anime_idt_foreonly_adv_mask_recons_allonly2', 'ours_selfie2anime_foreonly_adv_mask_recons_all2', 'ours_selfie2anime_idt_foreonly_adv_mask_recons_allonly2_resume', 'ours_selfie2anime_foreonly_adv_mask_recons_all4', 'ours_selfie2anime_foreonly_adv_mask_recons_all5', 'ours_selfie2anime_foreonly_adv_mask_recons_all4_resume', 'ours_selfie2anime_foreonly_adv_mask_recons_all4_resume2']
+    whole_log_name, log_names = 'a2o_ours_foreonly', ['ours_selfie2anime_foreonly_adv_mask_recons_all4', 'ours_selfie2anime_foreonly_adv_mask_recons_all4_resume4',  'ours_selfie2anime_foreonly_adv_mask_recons_all4_resume4_resume2', 'ours_selfie2anime_foreonly_adv_mask_recons_all_b2_09', 'ours_selfie2anime_foreonly_adv_mask_recons_all_b2_09_2', 'ours_selfie2anime_foreonly_adv_mask_recons_all_multires']
+    #whole_log_name, log_names = 'front', ['MSPC_front2side_b04_lsgan', 'MSPC_front2side_b04_lsgan2', 'ours_front2']
 
-    test_only = False 
+    test_only = True 
 
     if not test_only:
         columns_to_plot = ['loss_G', 'loss_D']

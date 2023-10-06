@@ -112,9 +112,9 @@ class ResnetGenerator(nn.Module):
         model += [nn.Sigmoid()]
 
         self.model = nn.Sequential(*model)
-        
+
         self.apply(self.init_weights)
-    
+
     def init_weights(self, module):
         if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
             module.weight.data.normal_(mean=0, std=0.02)
@@ -123,7 +123,11 @@ class ResnetGenerator(nn.Module):
 
     def forward(self, x, mask):
         """Standard forward"""
-        inp = x
-        foreground = self.model(torch.cat([x, mask], dim=1))
-        output = mask*foreground + (1-mask)*inp
-        return foreground, inp, output
+        inp = torch.cat([x, mask], dim=1)
+        x = self.model(inp)
+        out_mask = x[:,0,:,:].unsqueeze(1)
+        foreground = x[:,1:4,:,:]
+        background = x[:,4:7,:,:]
+        output = out_mask*foreground + (1-out_mask)*background
+
+        return out_mask, foreground, background, output

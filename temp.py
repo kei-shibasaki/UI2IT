@@ -340,9 +340,10 @@ def check_params_u2net():
     print(f'GMACs: {macs/1e9:.3f}, Params: {params/1e6:.3f} M')
 
 def count_epoch():
-    ext = 'jpg'
-    dataset_name = 'selfie2anime'
-    total_epoch = 200
+    ext = 'png'
+    #dataset_name = 'edges2handbags'
+    dataset_name = 'front2side'
+    total_epoch = 50
 
     trainA_dir = f'datasets/{dataset_name}/trainA'
     trainB_dir = f'datasets/{dataset_name}/trainB'
@@ -357,21 +358,21 @@ def count_epoch():
     print(f'Epoch: {total_epoch}, Step: {step_per_epoch*total_epoch//4}')
 
 def to_binary():
-    out_dir = 'datasets/selfie2anime/trainB_map_bi'
+    out_dir = 'datasets/edges2handbags/trainB_map_bi'
     os.makedirs(out_dir, exist_ok=True)
-    images = sorted(glob.glob('datasets/selfie2anime/trainB_map/*.png'))
+    images = sorted(glob.glob('datasets/edges2handbags/trainB_map/*.png'))
     for img_path in tqdm(images):
         fname = os.path.basename(img_path)
         img = cv2.imread(img_path)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        ret, thresh = cv2.threshold(img, 50, 255, cv2.THRESH_BINARY)
+        ret, thresh = cv2.threshold(img, 5, 255, cv2.THRESH_BINARY)
         cv2.imwrite(os.path.join(out_dir, fname), thresh)
 
 def check_binary():
     out_dir = 'temp/comp_thresh'
     os.makedirs(out_dir, exist_ok=True)
-    images1 = sorted(glob.glob('datasets/selfie2anime/testA/*.jpg'))
-    images2 = sorted(glob.glob('datasets/selfie2anime/testA_map/*.png'))
+    images1 = sorted(glob.glob('datasets/edges2handbags/testB/*.jpg'))
+    images2 = sorted(glob.glob('datasets/edges2handbags/testB_map/*.png'))
     for img_path1, img_path2 in zip(tqdm(images1), images2):
         fname = os.path.basename(img_path1)
         img_input = cv2.imread(img_path1)
@@ -390,4 +391,6 @@ def check_binary():
 
 
 if __name__=='__main__':
-    to_binary()
+    #to_binary()
+    #check_binary()
+    count_epoch()

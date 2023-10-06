@@ -10,16 +10,15 @@
     "data_extention": "jpg",
     "mask_extention": "png",
     "save_extention": "jpg",
-    "cache_images": true,
+    "cache_images": false,
     "enable_line_nortify": true,
 
-    "name": "ours_selfie2anime_foreonly",
+    "name": "ours_selfie2anime_foreonly_all",
     "input_resolution": [256, 256],
     "network_module_G": "models.network",
-    "model_type_G": "GeneratorSeparate3",
+    "model_type_G": "GeneratorSeparate",
     "netG": {
         "in_channels": 4,
-        "out_channels": 3,
         "width": 32,
         "enc_blk_nums": [1,1,1], 
         "middle_blk_num": 3,
@@ -29,16 +28,8 @@
     "network_module_D": "models.discriminator",
     "model_type_D": "NLayerDiscriminator",
     "netD": {
-        "input_nc": 3,
+        "input_nc": 7,
         "ndf": 64,
-        "n_layers": 3
-    },
-
-    "network_module_D_mask": "models.discriminator",
-    "model_type_D_mask": "NLayerDiscriminator",
-    "netD_mask": {
-        "input_nc": 1,
-        "ndf": 32,
         "n_layers": 3
     },
 
@@ -52,17 +43,21 @@
 
     "batch_size": 1,
     "steps": 680000,
-    "use_grad_clip": true,
+    "use_grad_clip": false,
     "grad_clip_val": 0.1,
     "pool_size": 50,
     "coef_adv": 1,
     "coef_mspc": 1,
-    "coef_constraint": 0.5,
     "coef_idt": 1,
     "coef_recons": 1,
-    "coef_mask_recons": 1,
-    "coef_adv_mask": 1,
-    
+    "coef_constraint": 0.5,
+    "coef_adv_mask": 0.5,
+    "coef_mspc_mask": 0.5,
+    "coef_idt_mask": 0.5,
+    "coef_adv_all": 1,
+    "coef_mspc_all": 1,
+    "coef_idt_all": 1,
+
     "lr_w": 5e-5, 
     "lr_max": 2e-4, 
     "lr_min": 0, 

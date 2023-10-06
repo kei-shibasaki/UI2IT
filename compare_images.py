@@ -72,7 +72,21 @@ if __name__=='__main__':
         'experiments/ours_horse2zebra_lr_sep_idt_foreonly2/generated/220000/GA',
     ]
 
-    out_dir = os.path.join('temp', 'comp_h2z_foreonly')
+    images_dirs = [
+        'experiments/ours_apple2orange_lr_sep_idt_foreonly/generated/005000/A',
+        'experiments/ours_apple2orange_lr_sep_idt_foreonly/generated/005000/M_A',
+        'experiments/ours_apple2orange_lr_sep_idt_foreonly/generated/005000/GA',
+        'experiments/ours_apple2orange_lr_sep_idt_foreonly/generated/010000/GA',
+        'experiments/ours_apple2orange_lr_sep_idt_foreonly/generated/020000/GA',
+        'experiments/ours_apple2orange_lr_sep_idt_foreonly/generated/030000/GA',
+        'experiments/ours_apple2orange_lr_sep_idt_foreonly/generated/040000/GA',
+        'experiments/ours_apple2orange_lr_sep_idt_foreonly/generated/050000/GA',
+        'experiments/ours_apple2orange_lr_sep_idt_foreonly/generated/100000/GA',
+        'experiments/ours_apple2orange_lr_sep_idt_foreonly/generated/150000/GA',
+        'experiments/ours_apple2orange_lr_sep_idt_foreonly/generated/200000/GA',
+    ]
+
+    out_dir = os.path.join('temp', 'comp_a2o_step')
     os.makedirs(out_dir, exist_ok=True)
 
     compare_images(images_dirs, out_dir)
